@@ -78,15 +78,14 @@
       "id": "change-intelligence",
       "totem": "Change Intelligence",
       "research": "Research Change Intelligence",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "intelligence/change-intelligence.mjs",
         "site/local-live.js",
         "viewer_flutter/lib/live/workspace_live.dart",
-        "viewer_flutter/lib/widgets/graph_view.dart"
-      ],
-      "missing": [
-        "semantic file-to-entity mapping beyond registered provenance"
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "intelligence/source-mapping.mjs",
+        "scripts/validate-source-mapping.mjs"
       ]
     },
     {
@@ -183,10 +182,11 @@
         ".github/workflows/pages.yml",
         "data/repositories.json",
         "intelligence/repository-status.mjs",
-        "intelligence/claim-evidence-matrix.mjs"
+        "intelligence/claim-evidence-matrix.mjs",
+        "intelligence/source-index.mjs",
+        "intelligence/source-mapping.mjs"
       ],
       "missing": [
-        "incremental thesis index refresh",
         "artifact drift overlay"
       ]
     },

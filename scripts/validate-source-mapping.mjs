@@ -1,0 +1,24 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { buildSourceIndex, refreshSourceIndex } from "../intelligence/source-index.mjs";
+import { loadKnowledge } from "../intelligence/research-knowledge.mjs";
+import { mapSourceFilesToEntities } from "../intelligence/source-mapping.mjs";
+
+const root=fs.mkdtempSync(path.join(os.tmpdir(),"research-source-index-"));
+fs.mkdirSync(path.join(root,"docs","thesis"),{recursive:true});
+fs.writeFileSync(path.join(root,"docs","thesis","thesis_sync_status_zh.md"),"論文 研究 治理 同步 claim evidence citation artifact drift\n");
+fs.writeFileSync(path.join(root,"novel.md"),"hybrid residual nominal prediction controlled robustness evidence\n");
+let index=buildSourceIndex({root});
+assert.equal(index.schemaVersion,2);assert.equal(index.files,2);assert.ok(index.chunks.length>=2);
+fs.writeFileSync(path.join(root,"novel.md"),"hybrid residual model nominal prediction residual correction held-out robustness evidence\n");
+const refresh=refreshSourceIndex({files:["novel.md"],root,index});
+assert.equal(refresh.mode,"incremental");assert.deepEqual(refresh.refreshedFiles,["novel.md"]);
+const knowledge=loadKnowledge();
+const exact=mapSourceFilesToEntities(["docs/thesis/thesis_sync_status_zh.md"],{knowledge,index:refresh.index});
+assert.ok(exact[0].mappings.some(x=>x.entityId==="claim-sync"&&x.confidence===1));
+const content=mapSourceFilesToEntities(["novel.md"],{knowledge,index:refresh.index});
+assert.ok(content[0].mappings.some(x=>x.entityId==="claim-hybrid"),JSON.stringify(content));
+fs.rmSync(root,{recursive:true,force:true});
+console.log("Incremental Source Index and semantic source mapping OK");
