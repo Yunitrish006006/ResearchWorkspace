@@ -262,6 +262,29 @@
         "scripts/report-source-inventory.mjs",
         ".github/workflows/source-inventory.yml"
       ]
+    },
+    {
+      "id": "aliases",
+      "totem": "Workspace aliases",
+      "research": "Research bilingual/domain aliases",
+      "status": "implemented",
+      "evidence": [
+        "data/aliases.json",
+        "intelligence/research-knowledge.mjs",
+        "scripts/validate-relationship-audit.mjs"
+      ]
+    },
+    {
+      "id": "relationship-audit",
+      "totem": "Dependency contract audit",
+      "research": "Research relation contract audit",
+      "status": "implemented",
+      "evidence": [
+        "data/relationship-audit.json",
+        "docs/relationship-audit-2026-09-06.md",
+        "docs/research-relations.md",
+        "scripts/validate-relationship-audit.mjs"
+      ]
     }
   ]
 }

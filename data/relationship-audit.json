@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "auditedAt": "2026-09-06",
+  "relationCount": 6,
+  "relationOverrides": {
+    "rel-physics-spatial": {
+      "type": "uses-method",
+      "from": "claim-primary",
+      "to": "claim-free-space",
+      "auditStatus": "verified",
+      "auditNote": "Furniture-aware target-point estimation consumes the interpretable nominal-estimator path."
+    },
+    "rel-hybrid-primary": {
+      "type": "grounded-in",
+      "from": "claim-hybrid",
+      "to": "claim-primary",
+      "auditStatus": "verified",
+      "auditNote": "The residual model corrects a nominal prediction rather than replacing the primary estimator."
+    },
+    "rel-public-boundary": {
+      "type": "grounded-in",
+      "from": "claim-public",
+      "to": "claim-evidence-boundary",
+      "auditStatus": "verified",
+      "auditNote": "Public task-aligned benchmarks remain a separate evidence class from dense 3-D room validation."
+    },
+    "rel-persistence-limit": {
+      "type": "limits",
+      "from": "claim-persistence",
+      "to": "claim-public",
+      "auditStatus": "verified",
+      "auditNote": "Persistence wins constrain any general superiority claim on CU-BEMS."
+    },
+    "rel-action-limit": {
+      "type": "limits",
+      "from": "claim-causal",
+      "to": "claim-action",
+      "auditStatus": "verified",
+      "auditNote": "Missing E8 intervention evidence prevents counterfactual ranking from being presented as proven causal control."
+    },
+    "rel-trace-sync": {
+      "type": "supports",
+      "from": "claim-trace",
+      "to": "claim-sync",
+      "auditStatus": "verified",
+      "auditNote": "Claim-to-evidence traceability is the governance mechanism used to detect thesis-facing artifact drift."
+    }
+  }
+}

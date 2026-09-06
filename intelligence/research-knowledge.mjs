@@ -15,6 +15,8 @@ function unique(values) {
 
 export function loadKnowledge() {
   const graph = readJson("data/research-graph.json");
+  const aliases = readJson("data/aliases.json");
+  const relationshipAudit = readJson("data/relationship-audit.json");
   const repositories = readJson("data/repositories.json");
   const verification = readJson("data/verification-matrix.json");
   const topicIds = new Set(graph.topics.map((x) => x.id));
@@ -44,6 +46,8 @@ export function loadKnowledge() {
     root: workspaceRoot,
     ...graph,
     repositories: repositories.repositories,
+    aliases: aliases.aliases,
+    relationshipAudit,
     verificationChecks: verification.checks,
     topicById: new Map(graph.topics.map((x) => [x.id, x])),
     claimById: new Map(graph.claims.map((x) => [x.id, x])),
@@ -65,8 +69,19 @@ export function knowledgeSummary(knowledge = loadKnowledge()) {
   });
 }
 
-function textScore(query, values) {
-  const tokens = String(query).toLowerCase().split(/[^\p{L}\p{N}_-]+/u).filter((x) => x.length > 1);
+function expandQuery(query, aliases = {}) {
+  const raw = String(query);
+  const lower = raw.toLowerCase();
+  const expansions = [];
+  for (const [alias, values] of Object.entries(aliases)) {
+    if (lower.includes(alias.toLowerCase())) expansions.push(...values);
+  }
+  return [raw, ...expansions].join(" ");
+}
+
+function textScore(query, values, aliases = {}) {
+  const expanded = expandQuery(query, aliases);
+  const tokens = expanded.toLowerCase().split(/[^\p{L}\p{N}_-]+/u).filter((x) => x.length > 1);
   const haystack = values.join(" ").toLowerCase();
   return tokens.reduce((score, token) => score + (haystack.includes(token) ? 1 : 0), 0);
 }
@@ -77,7 +92,7 @@ export function resolveTask(query, knowledge = loadKnowledge()) {
     return {
       id: topic.id,
       name: topic.name,
-      score: textScore(query, [topic.id, topic.name, topic.summary, ...claims.flatMap((c) => [c.title, c.summary])]),
+      score: textScore(query, [topic.id, topic.name, topic.summary, ...claims.flatMap((c) => [c.id, c.title, c.summary])], knowledge.aliases),
       claimIds: claims.map((c) => c.id)
     };
   }).sort((a, b) => b.score - a.score || a.id.localeCompare(b.id));

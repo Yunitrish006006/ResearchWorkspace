@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 1,
+  "aliases": {
+    "空間估計": [
+      "spatial",
+      "Spatial Estimation",
+      "target-point",
+      "free-space",
+      "IDW",
+      "家具遮擋",
+      "插值"
+    ],
+    "插值": [
+      "spatial",
+      "IDW",
+      "target-point",
+      "interpolation",
+      "free-space"
+    ],
+    "枕頭": [
+      "claim-e7",
+      "real pillow target-point",
+      "E7",
+      "pillow"
+    ],
+    "混合模型": [
+      "hybrid",
+      "Hybrid Residual",
+      "residual correction",
+      "E6"
+    ],
+    "殘差": [
+      "hybrid",
+      "residual correction",
+      "nominal prediction",
+      "E6"
+    ],
+    "公開資料": [
+      "public",
+      "Public Benchmarks",
+      "SML2010",
+      "CU-BEMS",
+      "E9"
+    ],
+    "公開基準": [
+      "public",
+      "SML2010",
+      "CU-BEMS",
+      "persistence"
+    ],
+    "持續性": [
+      "claim-persistence",
+      "persistence baseline",
+      "CU-BEMS"
+    ],
+    "因果": [
+      "action",
+      "claim-causal",
+      "E8",
+      "intervention",
+      "causal efficacy"
+    ],
+    "控制": [
+      "action",
+      "counterfactual ranking",
+      "intervention",
+      "E8"
+    ],
+    "驗證": [
+      "evidence",
+      "Verification",
+      "E1",
+      "E6",
+      "E7",
+      "E8",
+      "E9"
+    ],
+    "證據": [
+      "evidence",
+      "Claim-to-Evidence",
+      "verification",
+      "evidence class"
+    ],
+    "同步": [
+      "governance",
+      "claim-sync",
+      "artifact drift",
+      "thesis sync",
+      "IEEE",
+      "presentation"
+    ],
+    "論文": [
+      "governance",
+      "thesis manuscript",
+      "IEEE paper",
+      "claim-evidence"
+    ],
+    "溫度": [
+      "scope",
+      "temperature",
+      "three-factor"
+    ],
+    "濕度": [
+      "scope",
+      "relative humidity",
+      "three-factor"
+    ],
+    "照度": [
+      "scope",
+      "illuminance",
+      "three-factor"
+    ],
+    "idw": [
+      "spatial",
+      "claim-baseline",
+      "sensor IDW baseline"
+    ],
+    "cubems": [
+      "public",
+      "CU-BEMS",
+      "E9",
+      "persistence"
+    ],
+    "cubem": [
+      "public",
+      "CU-BEMS",
+      "E9"
+    ],
+    "sml2010": [
+      "public",
+      "SML2010",
+      "E9"
+    ],
+    "e7": [
+      "claim-e7",
+      "real target-point",
+      "pillow"
+    ],
+    "e8": [
+      "claim-causal",
+      "intervention",
+      "causal"
+    ],
+    "e9": [
+      "claim-public",
+      "claim-persistence",
+      "public benchmark"
+    ]
+  }
+}
