@@ -48,14 +48,14 @@ class _GraphViewState extends State<GraphView> {
   @override
   void initState() {
     super.initState();
-    _data = _data;
+    _data = widget.data;
     _probe();
   }
 
   @override
   void didUpdateWidget(covariant GraphView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.data, _data)) _data = _data;
+    if (!identical(oldWidget.data, widget.data)) _data = widget.data;
   }
 
   @override
