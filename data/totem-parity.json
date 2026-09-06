@@ -52,7 +52,8 @@
       "status": "implemented",
       "evidence": [
         "site/index.html",
-        "site/research-graph-v2.js"
+        "site/research-graph-v2.js",
+        "scripts/validate-viewer-parity.mjs"
       ]
     },
     {
@@ -62,7 +63,8 @@
       "status": "implemented",
       "evidence": [
         "viewer_flutter/lib/widgets/graph_view.dart",
-        ".github/workflows/flutter-viewer.yml"
+        ".github/workflows/flutter-viewer.yml",
+        "scripts/validate-viewer-parity.mjs"
       ]
     },
     {
@@ -156,7 +158,8 @@
         "viewer_flutter/lib/widgets/graph_view.dart",
         "intelligence/conversation-sync.mjs",
         "intelligence/agent-adapter.mjs",
-        "tools/remote/bridge.sh"
+        "tools/remote/bridge.sh",
+        "scripts/validate-viewer-parity.mjs"
       ]
     },
     {

@@ -10,7 +10,7 @@ const legacyGraph=fs.readFileSync(new URL("../site/research-graph-v2.js",import.
 const html=fs.readFileSync(new URL("../site/index.html",import.meta.url),"utf8");
 
 const endpoints=[
-  "/api/repository-status","/api/change-intelligence","/api/verification-state",
+  "/api/graph-data","/api/repository-status","/api/change-intelligence","/api/verification-state",
   "/api/artifact-drift","/api/activity","/api/replay","/api/viewer-settings","/api/agent-adapter",
   "/api/conversation","/api/conversation/draft"
 ];
@@ -30,6 +30,9 @@ assert.ok(html.includes('id="conversationToggle"'));
 assert.ok(flutter.includes("Research Conversation"));
 assert.ok(legacy.includes("pollConversation"));
 assert.ok(legacy.includes("syncDraft"));
+assert.ok(legacy.includes("graphApi.replaceData"));
+assert.ok(legacyGraph.includes("replaceData:replaceData"));
+assert.ok(flutter.includes("_data = results[0] as GraphData"));
 
 for(const relation of ["contains","supports","uses-method","grounded-in","validated-by","limits"]){
   assert.ok(flutter.includes("'"+relation+"'")||flutterScene.includes("'"+relation+"'"),"Flutter relation missing "+relation);

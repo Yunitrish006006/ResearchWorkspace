@@ -46,6 +46,35 @@ var liveOverlay={
   activityNodeId:null,
   historicalEntityIds:new Set()
 };
+function replaceData(next){
+  if(!next||!next.root||!Array.isArray(next.topics)||!Array.isArray(next.claims))return false;
+  DATA=next;
+  root=DATA.root;
+  topics=DATA.topics||[];
+  claims=DATA.claims||[];
+  studies=DATA.studies||[];
+  evidence=DATA.evidence||[];
+  reviews=DATA.reviews||[];
+  sourceAreas=DATA.sourceAreas||[];
+  artifacts=DATA.artifacts||[];
+  relations=DATA.relations||[];
+  topicMap=new Map(topics.map(function(x){return[x.id,x]}));
+  claimMap=new Map(claims.map(function(x){return[x.id,x]}));
+  studyMap=new Map(studies.map(function(x){return[x.id,x]}));
+  evidenceMap=new Map(evidence.map(function(x){return[x.id,x]}));
+  reviewMap=new Map(reviews.map(function(x){return[x.id,x]}));
+  sourceAreaMap=new Map(sourceAreas.map(function(x){return[x.id,x]}));
+  artifactMap=new Map(artifacts.map(function(x){return[x.id,x]}));
+  var valid=new Set([root.id].concat(topics.map(function(x){return x.id}),claims.map(function(x){return x.id}),sourceAreas.map(function(x){return x.id})));
+  Array.from(expanded).forEach(function(id){if(!valid.has(id))expanded.delete(id)});
+  if(spotlightId&&!valid.has(spotlightId))spotlightId=null;
+  if(keyboardFocusId&&!valid.has(keyboardFocusId))keyboardFocusId=root.id;
+  var snapshot=document.getElementById("snapshot"),stats=document.getElementById("stats");
+  if(snapshot)snapshot.textContent=((DATA.snapshot&&DATA.snapshot.date)||"unknown")+" research snapshot";
+  if(stats)stats.textContent=topics.length+" topics｜"+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+sourceAreas.length+" source areas｜"+artifacts.length+" artifacts｜"+reviews.length+" reviews";
+  draw();
+  return true;
+}
 function setLiveState(state){
   state=state||{};
   var change=state.change||{};
@@ -445,5 +474,5 @@ document.getElementById("relations").addEventListener("click",function(){
 window.addEventListener("resize",function(){resize();draw()});
 resize();keyboardFocusId=root.id;syncEdgeUi();draw();
 
-window.__RESEARCH_GRAPH_3D__={scene:scene,reset:resetView,camera:cam,expanded:expanded,setLiveState:setLiveState};
+window.__RESEARCH_GRAPH_3D__={scene:scene,reset:resetView,camera:cam,expanded:expanded,setLiveState:setLiveState,replaceData:replaceData};
 }());

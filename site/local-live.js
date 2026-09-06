@@ -81,6 +81,7 @@ async function poll(){
   if(!base)return;
   try{
     var results=await Promise.all([
+      api("/api/graph-data"),
       api("/api/repository-status"),
       api("/api/change-intelligence"),
       api("/api/verification-state"),
@@ -90,7 +91,9 @@ async function poll(){
       api("/api/replay"),
       api("/api/viewer-settings")
     ]);
-    var repos=results[0],change=results[1],verification=results[2],artifact=results[3],adapter=results[4],activity=results[5],replay=results[6],settings=results[7];
+    var graphData=results[0],repos=results[1],change=results[2],verification=results[3],artifact=results[4],adapter=results[5],activity=results[6],replay=results[7],settings=results[8];
+    var graphApi=window.__RESEARCH_GRAPH_3D__;
+    if(graphApi&&graphApi.replaceData)graphApi.replaceData(graphData);
     currentChange=change;currentVerification=verification;
     show(els.live,"LIVE LOCAL · "+repos.dirtyCount+" dirty · "+repos.driftCount+" drift · "+repos.missingCount+" missing");
     if((change.changedEntityIds||[]).length||(change.impactedTopicIds||[]).length)show(els.change,"CHANGE · "+(change.changedEntityIds||[]).length+" changed · "+(change.impactedTopicIds||[]).length+" impacted");
