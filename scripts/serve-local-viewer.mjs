@@ -19,7 +19,7 @@ import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
 import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
 
 const here=path.dirname(fileURLToPath(import.meta.url));
-const root=path.resolve(here,".."),site=path.join(root,"site");
+const root=path.resolve(here,".."),site=path.join(root,"site"),flutterWeb=path.join(root,"viewer_flutter","build","web");
 const host="127.0.0.1";
 const argvPort=process.argv.indexOf("--port")>=0?Number(process.argv[process.argv.indexOf("--port")+1]):null;
 const port=argvPort||Number(process.env.RESEARCH_VIEWER_PORT||18775);
@@ -78,9 +78,18 @@ async function settleRefresh(task){
 const agentAdapter=createAgentAdapter({workspaceRoot:root,thesisRoot:thesisRoot(),knowledge,onActivity:emit,onTaskSettled:settleRefresh});
 
 function serveStatic(req,res){
-  const raw=req.url.split("?")[0],rel=raw==="/"?"index.html":raw.replace(/^\//,""),full=path.resolve(site,rel);
-  if(!full.startsWith(site)||!fs.existsSync(full)||fs.statSync(full).isDirectory()){res.statusCode=404;res.end("Not found");return}
-  const ext=path.extname(full),type={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".json":"application/json; charset=utf-8"}[ext]||"application/octet-stream";
+  const raw=req.url.split("?")[0];
+  const flutterReady=fs.existsSync(path.join(flutterWeb,"index.html"));
+  let base=flutterReady?flutterWeb:site;
+  let rel=raw==="/"?"index.html":raw.replace(/^\//,"");
+  if(raw==="/overview.html"||raw==="/app.js"||raw==="/styles.css"){base=site}
+  if(raw.startsWith("/legacy/")){base=site;rel=raw.slice("/legacy/".length)||"index.html"}
+  let full=path.resolve(base,rel);
+  if(!full.startsWith(base)||!fs.existsSync(full)||fs.statSync(full).isDirectory()){
+    if(base===flutterWeb&&flutterReady)full=path.join(flutterWeb,"index.html");
+    else{res.statusCode=404;res.end("Not found");return}
+  }
+  const ext=path.extname(full),type={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".json":"application/json; charset=utf-8",".wasm":"application/wasm",".svg":"image/svg+xml",".png":"image/png"}[ext]||"application/octet-stream";
   res.setHeader("Content-Type",type);res.end(fs.readFileSync(full));
 }
 async function submitPrompt(data,{source="viewer",clientMessageId=null}={}){

@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Research: Start Bridge",
+      "type": "shell",
+      "command": "bash tools/remote/bridge.sh start",
+      "problemMatcher": []
+    },
+    {
+      "label": "Research: Bridge Status",
+      "type": "shell",
+      "command": "bash tools/remote/bridge.sh status",
+      "problemMatcher": []
+    },
+    {
+      "label": "Research: Bridge Doctor",
+      "type": "shell",
+      "command": "bash tools/remote/bridge.sh doctor",
+      "problemMatcher": []
+    },
+    {
+      "label": "Research: Bridge Logs",
+      "type": "shell",
+      "command": "bash tools/remote/bridge.sh logs",
+      "problemMatcher": []
+    },
+    {
+      "label": "Research: Restart Bridge",
+      "type": "shell",
+      "command": "bash tools/remote/bridge.sh restart",
+      "problemMatcher": []
+    }
+  ]
+}

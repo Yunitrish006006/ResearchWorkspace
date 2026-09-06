@@ -1,0 +1,9 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { spawnSync } from "node:child_process";
+const file=new URL("../tools/remote/bridge.sh",import.meta.url);
+const source=fs.readFileSync(file,"utf8");
+const syntax=spawnSync("bash",["-n",file.pathname],{encoding:"utf8"});
+assert.equal(syntax.status,0,syntax.stderr);
+for(const token of ["RESEARCH_BRIDGE_PORT","RESEARCH_AGENT_ADAPTER","RESEARCH_CODEX_CWD","agent_busy","guard_agent_idle","ensure_flutter_build","tmux","nohup","127.0.0.1"])assert.ok(source.includes(token),token);
+console.log("Remote SSH/tmux Research Bridge tooling OK");

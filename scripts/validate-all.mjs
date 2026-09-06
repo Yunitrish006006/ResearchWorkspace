@@ -4,7 +4,8 @@ const scripts=[
  "validate-workspace.mjs","validate-orchestration.mjs","validate-semantic-lod.mjs",
  "validate-verification-graph.mjs","validate-change-intelligence.mjs","validate-replay.mjs",
  "validate-agent-adapter.mjs","validate-conversation-sync.mjs","validate-mcp.mjs",
- "validate-local-viewer.mjs","validate-totem-parity.mjs","validate-repository-integration.mjs"
+ "validate-local-viewer.mjs","validate-totem-parity.mjs","validate-repository-integration.mjs",
+ "validate-remote-bridge.mjs"
 ];
 for(const script of scripts){
  const run=spawnSync(process.execPath,[fileURLToPath(new URL(script,import.meta.url))],{stdio:"inherit"});

@@ -145,17 +145,15 @@
       "id": "local-bridge",
       "totem": "Local Bridge",
       "research": "Research Local Bridge",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "scripts/serve-local-viewer.mjs",
         "site/local-live.js",
         "viewer_flutter/lib/live/workspace_live.dart",
         "viewer_flutter/lib/widgets/graph_view.dart",
         "intelligence/conversation-sync.mjs",
-        "intelligence/agent-adapter.mjs"
-      ],
-      "missing": [
-        "remote bridge controller parity"
+        "intelligence/agent-adapter.mjs",
+        "tools/remote/bridge.sh"
       ]
     },
     {
@@ -196,8 +194,13 @@
       "id": "remote-bridge",
       "totem": "Remote SSH/tmux bridge tooling",
       "research": "Remote research bridge tooling",
-      "status": "missing",
-      "evidence": []
+      "status": "implemented",
+      "evidence": [
+        "tools/remote/bridge.sh",
+        "tools/remote/bootstrap-flutter.sh",
+        "scripts/flutter-local-build-fingerprint.mjs",
+        "scripts/validate-remote-bridge.mjs"
+      ]
     },
     {
       "id": "conversation-sync",
@@ -227,7 +230,6 @@
       ],
       "missing": [
         "Flutter/legacy overlay parity",
-        "remote bridge",
         "conversation sync"
       ]
     }
