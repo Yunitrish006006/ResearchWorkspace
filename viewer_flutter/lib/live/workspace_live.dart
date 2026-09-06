@@ -51,6 +51,9 @@ class WorkspaceLiveClient {
   Future<VerificationState> verificationState() async =>
       VerificationState.fromJson(await _get('/api/verification-state'));
 
+  Future<ArtifactDrift> artifactDrift() async =>
+      ArtifactDrift.fromJson(await _get('/api/artifact-drift'));
+
   Future<ActivityBatch> activity({int after = 0}) async =>
       ActivityBatch.fromJson(await _get('/api/activity', {'after': after.toString(), 'limit': '50'}));
 
@@ -97,6 +100,37 @@ class ResearchChange {
   factory ResearchChange.fromJson(Map<String, dynamic> json) => ResearchChange(
     changedEntityIds: _strings(json['changedEntityIds']).toSet(),
     impactedTopicIds: _strings(json['impactedTopicIds']).toSet(),
+  );
+}
+
+class ArtifactDriftFinding {
+  const ArtifactDriftFinding({required this.id, required this.message, required this.targetGroupId, required this.reason});
+  final String id;
+  final String message;
+  final String targetGroupId;
+  final String reason;
+  factory ArtifactDriftFinding.fromJson(Map<String, dynamic> json) => ArtifactDriftFinding(
+    id: json['id'] as String? ?? '',
+    message: json['message'] as String? ?? '',
+    targetGroupId: json['targetGroupId'] as String? ?? '',
+    reason: json['reason'] as String? ?? '',
+  );
+}
+
+class ArtifactDrift {
+  const ArtifactDrift({required this.available, required this.driftCount, required this.affectedArtifactGroupIds, required this.findings});
+  final bool available;
+  final int driftCount;
+  final Set<String> affectedArtifactGroupIds;
+  final List<ArtifactDriftFinding> findings;
+  factory ArtifactDrift.fromJson(Map<String, dynamic> json) => ArtifactDrift(
+    available: json['available'] as bool? ?? false,
+    driftCount: (json['driftCount'] as num?)?.toInt() ?? 0,
+    affectedArtifactGroupIds: _strings(json['affectedArtifactGroupIds']).toSet(),
+    findings: (json['findings'] as List? ?? const [])
+      .whereType<Map>()
+      .map((x) => ArtifactDriftFinding.fromJson(Map<String, dynamic>.from(x)))
+      .toList(growable: false),
   );
 }
 

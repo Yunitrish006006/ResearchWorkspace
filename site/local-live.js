@@ -8,6 +8,7 @@ var els={
   adapter:document.getElementById("agentAdapter"),
   orch:document.getElementById("orchestrationState"),
   verify:document.getElementById("verificationState"),
+  artifact:document.getElementById("artifactDrift"),
   agent:document.getElementById("agentActivity"),
   promptToggle:document.getElementById("promptToggle"),
   promptBar:document.getElementById("promptBar"),
@@ -39,12 +40,13 @@ async function poll(){
       api("/api/repository-status"),
       api("/api/change-intelligence"),
       api("/api/verification-state"),
+      api("/api/artifact-drift"),
       api("/api/agent-adapter"),
       api("/api/activity?after="+lastActivitySequence+"&limit=50"),
       api("/api/replay"),
       api("/api/viewer-settings")
     ]);
-    var repos=results[0],change=results[1],verification=results[2],adapter=results[3],activity=results[4],replay=results[5],settings=results[6];
+    var repos=results[0],change=results[1],verification=results[2],artifact=results[3],adapter=results[4],activity=results[5],replay=results[6],settings=results[7];
     currentChange=change;currentVerification=verification;
     show(els.live,"LIVE LOCAL · "+repos.dirtyCount+" dirty · "+repos.driftCount+" drift · "+repos.missingCount+" missing");
     if((change.changedEntityIds||[]).length||(change.impactedTopicIds||[]).length)show(els.change,"CHANGE · "+(change.changedEntityIds||[]).length+" changed · "+(change.impactedTopicIds||[]).length+" impacted");
@@ -54,6 +56,7 @@ async function poll(){
     if(latest){lastActivity=latest;lastActivitySequence=Math.max(lastActivitySequence,latest.sequence||0);show(els.agent,"AGENT · "+latest.type+" · "+(latest.summary||""))}
     var failed=(verification.failedTargetIds||[]).length,running=(verification.runningTargetIds||[]).length,passed=(verification.passedTargetIds||[]).length;
     show(els.verify,"VERIFY · "+passed+" pass · "+running+" run · "+failed+" fail");
+    if(artifact&&artifact.driftCount>0){show(els.artifact,"ARTIFACT · "+artifact.driftCount+" drift");els.artifact.title=(artifact.findings||[]).map(function(x){return x.message}).join("\n")}else if(els.artifact)els.artifact.hidden=true;
     if(replay.eventCount>0){
       els.replayBar.hidden=false;els.replaySlider.min=replay.earliestSequence;els.replaySlider.max=replay.latestSequence;
       if(!replaying)els.replaySlider.value=replay.latestSequence;

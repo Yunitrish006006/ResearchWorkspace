@@ -26,6 +26,7 @@ class _GraphViewState extends State<GraphView> {
   RepositoryStatus? _repoStatus;
   ResearchChange? _change;
   VerificationState? _verification;
+  ArtifactDrift? _artifactDrift;
   ActivityEvent? _activity;
   ReplayTimeline? _timeline;
   ReplayFrame? _replayFrame;
@@ -81,21 +82,23 @@ class _GraphViewState extends State<GraphView> {
         client.repositoryStatus(),
         client.changeIntelligence(),
         client.verificationState(),
+        client.artifactDrift(),
         client.activity(after: _activity?.sequence ?? 0),
         client.replayTimeline(),
         client.viewerSettings(),
         client.adapterStatus(),
       ]);
       if (!mounted) return;
-      final batch = results[3] as ActivityBatch;
+      final batch = results[4] as ActivityBatch;
       setState(() {
         _repoStatus = results[0] as RepositoryStatus;
         _change = results[1] as ResearchChange;
         _verification = results[2] as VerificationState;
+        _artifactDrift = results[3] as ArtifactDrift;
         if (batch.events.isNotEmpty) _activity = batch.events.last;
-        _timeline = results[4] as ReplayTimeline;
-        _settings = results[5] as ViewerSettings;
-        _adapter = results[6] as AdapterStatus;
+        _timeline = results[5] as ReplayTimeline;
+        _settings = results[6] as ViewerSettings;
+        _adapter = results[7] as AdapterStatus;
         _liveError = null;
       });
     } catch (error) {
@@ -310,6 +313,7 @@ class _GraphViewState extends State<GraphView> {
               repo: _repoStatus,
               change: _change,
               verification: _verification,
+              artifactDrift: _artifactDrift,
               activity: _activity,
               adapter: _adapter,
               error: _liveError,
@@ -425,10 +429,11 @@ class _InfoItem extends StatelessWidget {
 }
 
 class _LiveStrip extends StatelessWidget {
-  const _LiveStrip({required this.repo, required this.change, required this.verification, required this.activity, required this.adapter, required this.error});
+  const _LiveStrip({required this.repo, required this.change, required this.verification, required this.artifactDrift, required this.activity, required this.adapter, required this.error});
   final RepositoryStatus? repo;
   final ResearchChange? change;
   final VerificationState? verification;
+  final ArtifactDrift? artifactDrift;
   final ActivityEvent? activity;
   final AdapterStatus? adapter;
   final String? error;
@@ -445,6 +450,11 @@ class _LiveStrip extends StatelessWidget {
           _Pill('CHANGE ' + change!.changedEntityIds.length.toString() + '/' + change!.impactedTopicIds.length.toString(), const Color(0xFFFBBF24)),
         if (verification != null)
           _Pill('VERIFY ' + verification!.passed.length.toString() + ' pass · ' + verification!.failed.length.toString() + ' fail', const Color(0xFF86EFAC)),
+        if (artifactDrift != null && artifactDrift!.driftCount > 0)
+          Tooltip(
+            message: artifactDrift!.findings.map((x) => x.message).join('\n'),
+            child: _Pill('ARTIFACT ' + artifactDrift!.driftCount.toString() + ' drift', const Color(0xFFF59E0B)),
+          ),
         if (activity != null) _Pill('AGENT ' + activity!.type, const Color(0xFF67E8F9)),
         if (adapter != null) _Pill(adapter!.enabled ? 'ADAPTER ready' : 'ADAPTER off', adapter!.enabled ? const Color(0xFF86EFAC) : const Color(0xFF94A3B8)),
         if (error != null) _Pill('LOCAL API issue', const Color(0xFFF87171)),

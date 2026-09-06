@@ -187,7 +187,10 @@
         "intelligence/source-index.mjs",
         "intelligence/source-mapping.mjs",
         "intelligence/artifact-drift.mjs",
-        "scripts/validate-artifact-drift.mjs"
+        "scripts/validate-artifact-drift.mjs",
+        "viewer_flutter/lib/live/workspace_live.dart",
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "site/local-live.js"
       ]
     },
     {
@@ -230,13 +233,11 @@
       "id": "validator-parity",
       "totem": "Regression validators",
       "research": "Research regression/parity validators",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "scripts/validate-all.mjs",
-        ".github/workflows/codex-discord.yml"
-      ],
-      "missing": [
-        "Flutter/legacy overlay parity"
+        ".github/workflows/codex-discord.yml",
+        "scripts/validate-viewer-parity.mjs"
       ]
     }
   ]
