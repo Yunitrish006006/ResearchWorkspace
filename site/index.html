@@ -1,133 +1,73 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#071017">
-  <meta name="description" content="ResearchWorkspace — thesis research graph, claims, evidence and verification status.">
-  <title>ResearchWorkspace</title>
-  <link rel="stylesheet" href="./styles.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; connect-src 'self'">
+<meta name="theme-color" content="#050b14">
+<title>ResearchWorkspace 3D Research Graph</title>
+<link rel="stylesheet" href="./graph-v2.css">
 </head>
 <body>
-  <div class="noise"></div>
-  <header class="topbar">
-    <a class="brand" href="#top"><span class="mark">RW</span><span>ResearchWorkspace</span></a>
-    <nav>
-      <a href="#graph">Research Graph</a>
-      <a href="#evidence">Evidence</a>
-      <a href="#architecture">Architecture</a>
-      <a class="repo-link" href="https://github.com/Yunitrish006006/ResearchWorkspace">GitHub ↗</a>
-    </nav>
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <b>ResearchWorkspace</b>
+      <small>3D research intelligence explorer · TotemWorkspace V2 interaction model adapted to thesis semantics</small>
+    </div>
+    <span class="pill" id="snapshot">loading</span>
+    <span class="pill" id="stats">loading</span>
+    <span class="pill verification-state" id="verificationState">VERIFY</span>
+    <a class="button-link" href="./overview.html">研究總覽</a>
+    <a class="button-link" href="https://github.com/Yunitrish006006/ResearchWorkspace">GitHub ↗</a>
+    <button id="overview" type="button">總覽</button>
+    <button id="expandAll3d" type="button">全展開</button>
+    <div class="filter-wrap">
+      <button id="edgeFilters" type="button" aria-expanded="false" aria-controls="edgeFilterPanel">線條 6/6</button>
+      <div id="edgeFilterPanel" class="edge-filter" hidden>
+        <b>研究關係</b>
+        <label><input type="checkbox" data-edge-filter="contains" checked><i class="dot contains"></i>Contains</label>
+        <label><input type="checkbox" data-edge-filter="supports" checked><i class="dot supports"></i>Supports</label>
+        <label><input type="checkbox" data-edge-filter="uses-method" checked><i class="dot method"></i>Uses method</label>
+        <label><input type="checkbox" data-edge-filter="grounded-in" checked><i class="dot grounded"></i>Grounded in</label>
+        <label><input type="checkbox" data-edge-filter="validated-by" checked><i class="dot verification"></i>Validated by</label>
+        <label><input type="checkbox" data-edge-filter="limits" checked><i class="dot limits"></i>Limits / contradicts</label>
+        <small>展開 Topic 後顯示 Claim；再展開 Claim 顯示 Study、Evidence、Verification。跨主題關係會保留到實際 research endpoint。</small>
+        <div class="filter-actions">
+          <button id="edgeFilterAll" type="button">全部</button>
+          <button id="edgeFilterNone" type="button">清除</button>
+        </div>
+      </div>
+    </div>
+    <button id="relations" type="button">關係</button>
   </header>
 
-  <main id="top">
-    <section class="hero section">
-      <div class="eyebrow">THESIS RESEARCH INTELLIGENCE</div>
-      <h1>把論文的主張、方法、證據與驗證<br><span>放進同一張可追溯的研究圖譜。</span></h1>
-      <p class="lede">ResearchWorkspace 以 <strong>Three-Factor-Digital-Twin</strong> 為論文來源，將研究問題、Claim、Method、Dataset、Experiment、Result 與 Verification 組織成可檢查的知識結構。</p>
-      <div class="hero-actions">
-        <a class="button primary" href="#graph">Explore graph</a>
-        <a class="button" href="https://github.com/Yunitrish006006/Three-Factor-Digital-Twin">Thesis repository ↗</a>
-      </div>
-      <div class="metrics">
-        <div><strong>3</strong><span>Environmental factors</span></div>
-        <div><strong>E1–E9</strong><span>Experiment registry</span></div>
-        <div><strong>4</strong><span>Evidence classes</span></div>
-        <div><strong>1</strong><span>Canonical thesis repo</span></div>
-      </div>
+  <main class="stage">
+    <section id="pane3d" class="pane">
+      <canvas id="graph3d" class="canvas3d" tabindex="0" role="application" aria-label="ResearchWorkspace 3D 研究圖；方向鍵切換節點，Enter 或空白鍵啟動"></canvas>
+      <div class="hint3d">點 Topic 展開 Claim｜點 Claim 展開 Study / Evidence / Verification｜左鍵旋轉・右鍵拖曳平移・滾輪縮放｜手機一指旋轉・兩指縮放＋平移｜方向鍵選節點・Enter / Space 啟動</div>
     </section>
 
-    <section class="section split intro">
-      <div>
-        <div class="section-kicker">RESEARCH SCOPE</div>
-        <h2>Single-room sparse-sensing spatial digital twin</h2>
-      </div>
-      <div class="prose">
-        <p>核心研究是在單一房間中，以稀疏感測估計 <strong>temperature、relative humidity、illuminance</strong> 三個環境變數。可解釋的 variable-specific nominal model 是 primary estimator；稀疏校正與 hybrid residual 作為後續修正層。</p>
-        <p class="muted">Web、MCP 與 agent layer 是服務與研究工作流介面，不被當成主要科學貢獻。介入實驗完成前，控制輸出維持為 counterfactual action ranking。</p>
-      </div>
-    </section>
+    <aside id="info" class="info" hidden>
+      <div class="info-eyebrow" id="infoType">NODE</div>
+      <h2 id="infoTitle"></h2>
+      <p id="infoBody"></p>
+      <div id="infoContent"></div>
+    </aside>
 
-    <section id="graph" class="section">
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">INTERACTIVE VIEW</div>
-          <h2>Research Graph</h2>
-        </div>
-        <div class="legend">
-          <span><i class="dot topic"></i>Topic</span>
-          <span><i class="dot claim"></i>Claim</span>
-          <span><i class="dot method"></i>Method</span>
-          <span><i class="dot evidence"></i>Evidence</span>
-          <span><i class="dot review"></i>Verification</span>
-        </div>
-      </div>
-
-      <div class="graph-shell">
-        <div class="graph-stage">
-          <svg id="researchGraph" viewBox="0 0 1000 560" role="img" aria-label="Interactive research graph"></svg>
-        </div>
-        <aside id="inspector" class="inspector">
-          <div class="section-kicker">SELECTED NODE</div>
-          <h3 id="nodeTitle">Research topic</h3>
-          <div id="nodeType" class="node-type">TOPIC</div>
-          <p id="nodeDescription">點選圖中的節點，查看其研究角色、證據邊界與關聯。</p>
-          <div id="nodeLinks" class="node-links"></div>
-        </aside>
-      </div>
-    </section>
-
-    <section id="evidence" class="section">
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">CLAIM VERIFICATION</div>
-          <h2>E1–E9 Evidence Registry</h2>
-        </div>
-        <p class="muted compact">保留可重現結果、負向結果與尚未完成的證據，不把不同 evidence class 混成同一種驗證。</p>
-      </div>
-      <div id="evidenceGrid" class="evidence-grid"></div>
-    </section>
-
-    <section id="architecture" class="section">
-      <div class="section-kicker">SYSTEM CONTRACT</div>
-      <h2>Two repositories, one research truth chain</h2>
-      <div class="architecture">
-        <a class="arch-card source" href="https://github.com/Yunitrish006006/Three-Factor-Digital-Twin">
-          <span>CANONICAL SOURCE</span>
-          <strong>Three-Factor-Digital-Twin</strong>
-          <small>Thesis · experiments · OpenSpec · outputs</small>
-        </a>
-        <div class="arrow">→</div>
-        <div class="arch-card kernel">
-          <span>RESEARCH KERNEL</span>
-          <strong>ResearchWorkspace</strong>
-          <small>Topic · Claim · Evidence · Verification</small>
-        </div>
-        <div class="arrow">→</div>
-        <div class="arch-card viewer">
-          <span>VIEW & REVIEW</span>
-          <strong>Graph / Change / Replay</strong>
-          <small>Traceability · impact · research history</small>
-        </div>
-      </div>
-
-      <div class="principles">
-        <div><span>01</span><strong>Stable entities</strong><p>研究實體以穩定 ID 表達，避免章節改名後失去關係。</p></div>
-        <div><span>02</span><strong>Typed relations</strong><p>Claim 與 Evidence 透過 supports、contradicts、uses-method 等關係連接。</p></div>
-        <div><span>03</span><strong>Evidence boundaries</strong><p>Synthetic、real target-point、public benchmark 與 intervention evidence 分層。</p></div>
-        <div><span>04</span><strong>Verification first</strong><p>方法狀態與主張強度跟著實際證據，而不是跟著敘事需求。</p></div>
-      </div>
-    </section>
-  </main>
-
-  <footer>
-    <div>
-      <strong>ResearchWorkspace</strong>
-      <span>Research intelligence for Three-Factor-Digital-Twin</span>
+    <div class="legend">
+      <span><i class="node-dot topic"></i>Topic</span>
+      <span><i class="node-dot claim"></i>Claim</span>
+      <span><i class="node-dot study"></i>Study / Method</span>
+      <span><i class="node-dot evidence"></i>Evidence</span>
+      <span><i class="node-dot review"></i>Verification</span>
+      <span><i class="dot supports"></i>Supports</span>
+      <span><i class="dot limits"></i>Limits</span>
     </div>
-    <div class="footer-meta">Static GitHub Pages view · source snapshot: thesis main @ ea1d919</div>
-  </footer>
+  </main>
+</div>
 
-  <script src="./app.js"></script>
+<script src="./generated/graph-data.js"></script>
+<script src="./research-graph-v2.js"></script>
 </body>
 </html>
