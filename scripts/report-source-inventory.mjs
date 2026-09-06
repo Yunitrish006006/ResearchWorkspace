@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { loadKnowledge } from "../intelligence/research-knowledge.mjs";
+import { loadKnowledge, workspaceRoot } from "../intelligence/research-knowledge.mjs";
 import { loadSourceIndex } from "../intelligence/source-index.mjs";
 import { mappedImpactSurface } from "../intelligence/source-mapping.mjs";
 
 const strict=process.argv.includes("--strict"),knowledge=loadKnowledge(),index=loadSourceIndex();
-const outputDir=path.join(knowledge.root,".research-index");
+const outputDir=path.join(workspaceRoot,".research-index");
 fs.mkdirSync(outputDir,{recursive:true});
 
 const byExtension={};
@@ -25,19 +25,30 @@ for(const record of index.fileRecords??[]){
     record.path.startsWith("tests/")?"tests":"other";
   byArea[area]=(byArea[area]??0)+1;
 }
+
 const registeredSources=[...new Set(knowledge.claims.flatMap(c=>c.sources??[]))];
 const presentPaths=new Set((index.fileRecords??[]).map(x=>x.path));
 const missingRegisteredSources=registeredSources.filter(source=>!presentPaths.has(source));
 const mapping=mappedImpactSurface(registeredSources,{knowledge,index});
-const registeredCoverage=mapping.files.map(item=>({file:item.file,entityIds:item.mappings.map(x=>x.entityId),mappingMode:item.mappingMode}));
+const registeredCoverage=mapping.files.map(item=>({
+  file:item.file,
+  entityIds:item.mappings.map(x=>x.entityId),
+  mappingMode:item.mappingMode
+}));
 const inventory={
-  schemaVersion:1,generatedAt:new Date().toISOString(),repository:index.repository,
-  rootPresent:index.rootPresent,files:index.files,chunks:index.chunks.length,
+  schemaVersion:1,
+  generatedAt:new Date().toISOString(),
+  repository:index.repository,
+  rootPresent:index.rootPresent,
+  files:index.files,
+  chunks:index.chunks.length,
   byExtension:Object.fromEntries(Object.entries(byExtension).sort()),
   byArea:Object.fromEntries(Object.entries(byArea).sort()),
   registeredClaimSources:registeredSources.length,
-  missingRegisteredSources,registeredCoverage
+  missingRegisteredSources,
+  registeredCoverage
 };
+
 fs.writeFileSync(path.join(outputDir,"source-inventory.json"),JSON.stringify(inventory,null,2)+"\n");
 const lines=[
   "# ResearchWorkspace source/document inventory","",
@@ -53,8 +64,11 @@ const lines=[
   ...inventory.registeredCoverage.map(x=>"- `"+x.file+"` → "+(x.entityIds.join(", ")||"UNMAPPED")+" ("+x.mappingMode+")"),
   ""
 ];
-if(missingRegisteredSources.length)lines.push("## Missing registered sources","",...missingRegisteredSources.map(x=>"- `"+x+"`"),"");
+if(missingRegisteredSources.length){
+  lines.push("## Missing registered sources","",...missingRegisteredSources.map(x=>"- `"+x+"`"),"");
+}
 fs.writeFileSync(path.join(outputDir,"source-inventory.md"),lines.join("\n")+"\n");
+
 if(strict){
   if(!index.rootPresent)throw new Error("Canonical thesis repository is not present");
   if(index.files<1||index.chunks<1)throw new Error("Source index is empty");

@@ -3,6 +3,8 @@ import fs from "node:fs";
 
 const flutter=fs.readFileSync(new URL("../viewer_flutter/lib/widgets/graph_view.dart",import.meta.url),"utf8");
 const flutterLive=fs.readFileSync(new URL("../viewer_flutter/lib/live/workspace_live.dart",import.meta.url),"utf8");
+const flutterData=fs.readFileSync(new URL("../viewer_flutter/lib/model/graph_data.dart",import.meta.url),"utf8");
+const flutterScene=fs.readFileSync(new URL("../viewer_flutter/lib/model/graph_scene.dart",import.meta.url),"utf8");
 const legacy=fs.readFileSync(new URL("../site/local-live.js",import.meta.url),"utf8");
 const legacyGraph=fs.readFileSync(new URL("../site/research-graph-v2.js",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../site/index.html",import.meta.url),"utf8");
@@ -22,16 +24,24 @@ for(const semantic of ["changedEntityIds","impactedTopicIds","runningVerificatio
 assert.ok(flutter.includes("ArtifactDrift"));
 assert.ok(legacy.includes("artifact.driftCount"));
 assert.ok(html.includes('id="artifactDrift"'));
+
 for(const relation of ["contains","supports","uses-method","grounded-in","validated-by","limits"]){
-  assert.ok(flutter.includes("'"+relation+"'"),"Flutter relation missing "+relation);
+  assert.ok(flutter.includes("'"+relation+"'")||flutterScene.includes("'"+relation+"'"),"Flutter relation missing "+relation);
   assert.ok(legacyGraph.includes('"'+relation+'"')||html.includes('data-edge-filter="'+relation+'"'),"Legacy relation missing "+relation);
 }
 for(const lod of ["topic","claim","study","evidence","review","source-area","artifact"]){
-  assert.ok(flutter.includes("'"+lod+"'"),"Flutter LOD missing "+lod);
+  assert.ok(flutter.includes("'"+lod+"'")||flutterScene.includes("'"+lod+"'"),"Flutter LOD missing "+lod);
   assert.ok(legacyGraph.includes('"'+lod+'"'),"Legacy LOD missing "+lod);
 }
-assert.ok(flutter.includes("sourceAreas"));
-assert.ok(flutter.includes("artifacts"));
+
+for(const token of ["sourceAreas","artifacts","GraphSourceArea","GraphArtifact"]){
+  assert.ok(flutterData.includes(token),"Flutter graph model missing "+token);
+}
+assert.ok(flutterScene.includes("data.sourceAreas"));
+assert.ok(flutterScene.includes("data.artifacts"));
+assert.ok(flutterScene.includes("expanded.contains(area.id)"));
 assert.ok(legacyGraph.includes("sourceAreas"));
 assert.ok(legacyGraph.includes("artifacts"));
+assert.ok(legacyGraph.includes("expanded.has(area.id)"));
+
 console.log("Flutter and legacy live/overlay/semantic/L4 source parity OK");
