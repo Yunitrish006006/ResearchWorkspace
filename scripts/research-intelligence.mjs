@@ -35,6 +35,7 @@ switch (command) {
     print({ generatedAt:index.generatedAt, rootPresent:index.rootPresent, files:index.files, chunks:index.chunks.length });
     break;
   }
+  case "status":
   case "repository-status": print(repositoryStatusSummary({ knowledge })); break;
   case "claim-evidence-matrix": print(buildClaimEvidenceMatrix(knowledge)); break;
   case "artifact-drift": print(artifactDriftStatus()); break;
@@ -54,6 +55,7 @@ switch (command) {
   node scripts/research-intelligence.mjs change "<files>" "<topics>"
   node scripts/research-intelligence.mjs replay [sequence]
   node scripts/research-intelligence.mjs build-index
+  node scripts/research-intelligence.mjs status
   node scripts/research-intelligence.mjs repository-status
   node scripts/research-intelligence.mjs claim-evidence-matrix
   node scripts/research-intelligence.mjs artifact-drift

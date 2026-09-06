@@ -129,7 +129,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==="/api/health"&&req.method==="GET")return json(req,res,200,{status:"ok",mode:"local",ok:true,service:"research-local-bridge",port,summary:knowledgeSummary(),adapter:agentAdapter.status()});
     if(url.pathname==="/api/agent-adapter"&&req.method==="GET")return json(req,res,200,agentAdapter.status());
     if(url.pathname==="/api/graph-data"&&req.method==="GET")return json(req,res,200,buildGraphViewModel());
-    if(url.pathname==="/api/repository-status"&&req.method==="GET")return json(req,res,200,repositoryStatusSummary());
+    if((url.pathname==="/api/repository-status"||url.pathname==="/api/workspace-status")&&req.method==="GET")return json(req,res,200,repositoryStatusSummary());
     if(url.pathname==="/api/claim-evidence-matrix"&&req.method==="GET")return json(req,res,200,buildClaimEvidenceMatrix());
     if(url.pathname==="/api/artifact-drift"&&req.method==="GET")return json(req,res,200,artifactDriftStatus());
     if(url.pathname==="/api/viewer-settings"&&req.method==="GET")return json(req,res,200,loadSettings());

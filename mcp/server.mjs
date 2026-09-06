@@ -29,6 +29,7 @@ const TOOLS=Object.freeze([
   {name:"verification_state",description:"Return latest runtime verification state per target.",inputSchema:schema({})},
   {name:"change_intelligence",description:"Return semantic research changes plus Claim/Topic impact propagation.",inputSchema:schema({changed_files:{type:"array",items:{type:"string"},default:[]},changed_topics:{type:"array",items:{type:"string"},default:[]}})},
   {name:"replay",description:"Return Research Replay timeline or one historical frame.",inputSchema:schema({sequence:{type:["integer","null"],default:null}})},
+  {name:"workspace_status",description:"Totem-compatible alias for repository_status; report research/thesis branch, HEAD, dirty state and snapshot drift.",inputSchema:schema({})},
   {name:"repository_status",description:"Report local ResearchWorkspace/thesis repository branch, HEAD, dirty state and snapshot drift.",inputSchema:schema({})},
   {name:"claim_evidence_matrix",description:"Return the current Claim-to-Evidence traceability matrix.",inputSchema:schema({})},
   {name:"artifact_drift",description:"Detect thesis-facing artifact synchronization drift from Git history and dirty files.",inputSchema:schema({})},
@@ -51,6 +52,7 @@ function callTool(name,args={}){
     case"verification_state":return loadVerificationState();
     case"change_intelligence":return researchChangeIntelligence({changedFiles:args.changed_files??[],changedTopics:args.changed_topics??[],knowledge});
     case"replay":return args.sequence==null?replayTimeline():replayFrame(args.sequence);
+    case"workspace_status":
     case"repository_status":return repositoryStatusSummary({knowledge});
     case"claim_evidence_matrix":return buildClaimEvidenceMatrix(knowledge);
     case"artifact_drift":return artifactDriftStatus();
