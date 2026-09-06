@@ -159,7 +159,7 @@ export function createAgentAdapter({
   if(["off","none","disabled"].includes(state.configuredKind)){
     state.reason="agent adapter is disabled; set RESEARCH_AGENT_ADAPTER=codex to enable dispatch";
   }else if(state.configuredKind!=="codex"){
-    state.reason="unsupported agent adapter: "+state.configuredKind;
+    if(!state.reason)state.reason="unsupported agent adapter: "+state.configuredKind;
   }else if(!state.reason){
     try{
       const probe=spawnSyncImpl(config.codexBin,["--version"],{cwd:config.cwd,encoding:"utf8",timeout:5000,stdio:["ignore","pipe","pipe"]});
