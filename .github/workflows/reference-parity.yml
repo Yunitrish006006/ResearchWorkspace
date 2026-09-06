@@ -3,7 +3,9 @@ on:
   push:
     paths:
       - "data/totem-parity.json"
+      - "data/reference-surface-map.json"
       - "scripts/check-totem-reference.mjs"
+      - "scripts/validate-reference-surface.mjs"
       - ".github/workflows/reference-parity.yml"
   schedule:
     - cron: "17 3 * * *"
@@ -20,3 +22,9 @@ jobs:
           node-version: "22"
       - name: Confirm audited TotemWorkspace baseline is current
         run: node scripts/check-totem-reference.mjs
+      - name: Clone exact TotemWorkspace reference
+        run: git clone --depth=1 --branch main https://github.com/Yunitrish006006/TotemWorkspace.git .reference/TotemWorkspace
+      - name: Audit full reference file surface and required counterparts
+        env:
+          TOTEM_REFERENCE_ROOT: ${{ github.workspace }}/.reference/TotemWorkspace
+        run: node scripts/validate-reference-surface.mjs
