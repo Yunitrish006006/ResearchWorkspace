@@ -50,6 +50,7 @@ jobs:
           cp site/index.html _site/legacy/index.html
           cp site/graph-v2.css _site/legacy/graph-v2.css
           cp site/research-graph-v2.js _site/legacy/research-graph-v2.js
+          cp site/local-live.js _site/legacy/local-live.js
           cp site/generated/graph-data.js _site/legacy/generated/graph-data.js
           cp site/overview.html _site/overview.html
           cp site/app.js _site/app.js

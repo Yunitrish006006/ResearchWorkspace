@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import '../live/workspace_live.dart';
 import '../model/graph_data.dart';
 import '../model/graph_scene.dart';
 
@@ -19,7 +21,87 @@ class _GraphViewState extends State<GraphView> {
   Offset? _lastFocal;
   double _gestureZoom = 1.02;
 
+  WorkspaceLiveClient? _client;
+  Timer? _pollTimer;
+  RepositoryStatus? _repoStatus;
+  ResearchChange? _change;
+  VerificationState? _verification;
+  ActivityEvent? _activity;
+  ReplayTimeline? _timeline;
+  ReplayFrame? _replayFrame;
+  ViewerSettings _settings = const ViewerSettings(
+    promptEnabled: false,
+    agentActivityEnabled: true,
+    replayEnabled: true,
+    changeAnimationsEnabled: true,
+  );
+  AdapterStatus? _adapter;
+  String? _liveError;
+  bool _probing = true;
+  bool _submitting = false;
+  final TextEditingController _promptController = TextEditingController();
+
   GraphScene get _scene => buildGraphScene(widget.data, expanded: _expanded);
+
+  @override
+  void initState() {
+    super.initState();
+    _probe();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _client?.close();
+    _promptController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _probe() async {
+    final client = await WorkspaceLiveClient.probe();
+    if (!mounted) {
+      client?.close();
+      return;
+    }
+    setState(() {
+      _client = client;
+      _probing = false;
+    });
+    if (client != null) {
+      await _poll();
+      _pollTimer = Timer.periodic(const Duration(milliseconds: 2200), (_) => _poll());
+    }
+  }
+
+  Future<void> _poll() async {
+    final client = _client;
+    if (client == null) return;
+    try {
+      final results = await Future.wait<Object>([
+        client.repositoryStatus(),
+        client.changeIntelligence(),
+        client.verificationState(),
+        client.activity(after: _activity?.sequence ?? 0),
+        client.replayTimeline(),
+        client.viewerSettings(),
+        client.adapterStatus(),
+      ]);
+      if (!mounted) return;
+      final batch = results[3] as ActivityBatch;
+      setState(() {
+        _repoStatus = results[0] as RepositoryStatus;
+        _change = results[1] as ResearchChange;
+        _verification = results[2] as VerificationState;
+        if (batch.events.isNotEmpty) _activity = batch.events.last;
+        _timeline = results[4] as ReplayTimeline;
+        _settings = results[5] as ViewerSettings;
+        _adapter = results[6] as AdapterStatus;
+        _liveError = null;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _liveError = error.toString());
+    }
+  }
 
   void _reset() => setState(() {
     _camera = const Camera3d();
@@ -69,11 +151,60 @@ class _GraphViewState extends State<GraphView> {
     return best;
   }
 
+  Future<void> _togglePrompt() async {
+    final client = _client;
+    if (client == null) return;
+    try {
+      final next = await client.updateViewerSettings(_settings.copyWith(promptEnabled: !_settings.promptEnabled));
+      if (mounted) setState(() => _settings = next);
+    } catch (error) {
+      if (mounted) setState(() => _liveError = error.toString());
+    }
+  }
+
+  Future<void> _submitPrompt() async {
+    final client = _client;
+    final prompt = _promptController.text.trim();
+    if (client == null || prompt.isEmpty || _submitting || !_settings.promptEnabled) return;
+    setState(() => _submitting = true);
+    try {
+      final result = await client.submitPrompt(prompt);
+      if (!mounted) return;
+      setState(() {
+        _activity = result.event;
+        _promptController.clear();
+        _liveError = null;
+      });
+      await _poll();
+    } catch (error) {
+      if (mounted) setState(() => _liveError = error.toString());
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _selectReplay(int sequence) async {
+    final client = _client;
+    final timeline = _timeline;
+    if (client == null || timeline == null) return;
+    if (sequence >= timeline.latest) {
+      setState(() => _replayFrame = null);
+      return;
+    }
+    try {
+      final frame = await client.replayFrame(sequence);
+      if (mounted) setState(() => _replayFrame = frame);
+    } catch (error) {
+      if (mounted) setState(() => _liveError = error.toString());
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scene = _scene;
     final selected = scene.byId[_selectedId];
     final mediaWidth = MediaQuery.sizeOf(context).width;
+    final history = _replayFrame?.historicalEntityIds ?? const <String>{};
 
     return Stack(
       children: [
@@ -120,7 +251,18 @@ class _GraphViewState extends State<GraphView> {
                     if (id != null) _activate(id);
                   },
                   child: CustomPaint(
-                    painter: _GraphPainter(scene: scene, camera: _camera, selectedId: _selectedId),
+                    painter: _GraphPainter(
+                      scene: scene,
+                      camera: _camera,
+                      selectedId: _selectedId,
+                      changedEntityIds: _change?.changedEntityIds ?? const {},
+                      impactedTopicIds: _change?.impactedTopicIds ?? const {},
+                      runningVerification: _verification?.running ?? const {},
+                      passedVerification: _verification?.passed ?? const {},
+                      failedVerification: _verification?.failed ?? const {},
+                      activityNodeId: _activity?.focusId,
+                      historicalEntityIds: history,
+                    ),
                     size: Size.infinite,
                   ),
                 ),
@@ -142,6 +284,8 @@ class _GraphViewState extends State<GraphView> {
                 Wrap(spacing: 7, runSpacing: 7, children: [
                   FilledButton.tonal(onPressed: _reset, child: const Text('總覽')),
                   FilledButton.tonal(onPressed: _expandAll, child: const Text('全展開')),
+                  if (_client != null)
+                    FilledButton.tonal(onPressed: _togglePrompt, child: Text(_settings.promptEnabled ? 'Prompt ON' : 'Prompt OFF')),
                 ]),
                 const SizedBox(height: 8),
                 Text(
@@ -150,10 +294,27 @@ class _GraphViewState extends State<GraphView> {
                   widget.data.evidence.length.toString() + ' evidence',
                   style: const TextStyle(fontSize: 11, color: Color(0xFFBDD0E5)),
                 ),
+                if (_probing) const Padding(
+                  padding: EdgeInsets.only(top: 6),
+                  child: Text('LOCAL · probing', style: TextStyle(fontSize: 10, color: Color(0xFF8FA5BD))),
+                ),
               ],
             ),
           ),
         ),
+        if (_client != null)
+          Positioned(
+            top: 12,
+            left: mediaWidth > 850 ? 350 : 12,
+            child: _LiveStrip(
+              repo: _repoStatus,
+              change: _change,
+              verification: _verification,
+              activity: _activity,
+              adapter: _adapter,
+              error: _liveError,
+            ),
+          ),
         if (selected != null)
           Positioned(
             right: 12,
@@ -170,10 +331,7 @@ class _GraphViewState extends State<GraphView> {
                     Text(selected.label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
                     const SizedBox(height: 8),
                     Text(selected.summary, style: const TextStyle(color: Color(0xFFB8C9DA), height: 1.5)),
-                    if (selected.status != null) ...[
-                      const SizedBox(height: 12),
-                      _InfoItem('STATUS · ' + selected.status!),
-                    ],
+                    if (selected.status != null) _InfoItem('STATUS · ' + selected.status!),
                     if (selected.detail != null) _InfoItem(selected.detail!),
                     const SizedBox(height: 12),
                     Text(
@@ -187,13 +345,47 @@ class _GraphViewState extends State<GraphView> {
               ),
             ),
           ),
-        Positioned(
-          left: 12,
-          bottom: 12,
-          child: _Panel(
-            child: const Text('一指拖曳旋轉 · 兩指縮放＋平移 · 滾輪縮放 · 點 Topic / Claim 逐層展開', style: TextStyle(fontSize: 11, color: Color(0xFFA9BDD0))),
+        if (_client != null && _settings.promptEnabled)
+          Positioned(
+            left: 12,
+            right: selected == null ? 12 : math.min(455, mediaWidth - 12),
+            bottom: _timeline?.hasEvents == true ? 76 : 12,
+            child: _Panel(
+              child: Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: _promptController,
+                    minLines: 1,
+                    maxLines: 3,
+                    decoration: const InputDecoration(hintText: 'Research prompt', isDense: true),
+                    onSubmitted: (_) => _submitPrompt(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                FilledButton(onPressed: _submitting ? null : _submitPrompt, child: Text(_submitting ? '...' : '送出')),
+              ]),
+            ),
           ),
-        ),
+        if (_client != null && _settings.replayEnabled && _timeline?.hasEvents == true)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: _ReplayBar(
+              timeline: _timeline!,
+              frame: _replayFrame,
+              onChanged: _selectReplay,
+              onLive: () => setState(() => _replayFrame = null),
+            ),
+          ),
+        if (_client == null)
+          Positioned(
+            left: 12,
+            bottom: 12,
+            child: _Panel(
+              child: const Text('一指拖曳旋轉 · 兩指縮放＋平移 · 滾輪縮放 · 點 Topic / Claim 逐層展開', style: TextStyle(fontSize: 11, color: Color(0xFFA9BDD0))),
+            ),
+          ),
       ],
     );
   }
@@ -202,10 +394,9 @@ class _GraphViewState extends State<GraphView> {
 class _Panel extends StatelessWidget {
   const _Panel({required this.child});
   final Widget child;
-
   @override
   Widget build(BuildContext context) => Container(
-    constraints: const BoxConstraints(maxWidth: 470),
+    constraints: const BoxConstraints(maxWidth: 520),
     padding: const EdgeInsets.all(13),
     decoration: BoxDecoration(
       color: const Color(0xF2071522),
@@ -220,7 +411,6 @@ class _Panel extends StatelessWidget {
 class _InfoItem extends StatelessWidget {
   const _InfoItem(this.text);
   final String text;
-
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.only(top: 8),
@@ -234,11 +424,105 @@ class _InfoItem extends StatelessWidget {
   );
 }
 
+class _LiveStrip extends StatelessWidget {
+  const _LiveStrip({required this.repo, required this.change, required this.verification, required this.activity, required this.adapter, required this.error});
+  final RepositoryStatus? repo;
+  final ResearchChange? change;
+  final VerificationState? verification;
+  final ActivityEvent? activity;
+  final AdapterStatus? adapter;
+  final String? error;
+
+  @override
+  Widget build(BuildContext context) => _Panel(
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 6,
+      children: [
+        _Pill('LIVE LOCAL', const Color(0xFF67E8F9)),
+        if (repo != null) _Pill('REPO ' + repo!.dirtyCount.toString() + ' dirty · ' + repo!.driftCount.toString() + ' drift', const Color(0xFF93C5FD)),
+        if (change != null && (change!.changedEntityIds.isNotEmpty || change!.impactedTopicIds.isNotEmpty))
+          _Pill('CHANGE ' + change!.changedEntityIds.length.toString() + '/' + change!.impactedTopicIds.length.toString(), const Color(0xFFFBBF24)),
+        if (verification != null)
+          _Pill('VERIFY ' + verification!.passed.length.toString() + ' pass · ' + verification!.failed.length.toString() + ' fail', const Color(0xFF86EFAC)),
+        if (activity != null) _Pill('AGENT ' + activity!.type, const Color(0xFF67E8F9)),
+        if (adapter != null) _Pill(adapter!.enabled ? 'ADAPTER ready' : 'ADAPTER off', adapter!.enabled ? const Color(0xFF86EFAC) : const Color(0xFF94A3B8)),
+        if (error != null) _Pill('LOCAL API issue', const Color(0xFFF87171)),
+      ],
+    ),
+  );
+}
+
+class _Pill extends StatelessWidget {
+  const _Pill(this.text, this.color);
+  final String text;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: .08),
+      border: Border.all(color: color.withValues(alpha: .45)),
+      borderRadius: BorderRadius.circular(999),
+    ),
+    child: Text(text, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w700)),
+  );
+}
+
+class _ReplayBar extends StatelessWidget {
+  const _ReplayBar({required this.timeline, required this.frame, required this.onChanged, required this.onLive});
+  final ReplayTimeline timeline;
+  final ReplayFrame? frame;
+  final ValueChanged<int> onChanged;
+  final VoidCallback onLive;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = (frame?.sequence ?? timeline.latest).clamp(timeline.earliest, timeline.latest);
+    return _Panel(
+      child: Row(children: [
+        Text(frame == null ? 'REPLAY · LIVE' : 'REPLAY · ' + value.toString(), style: const TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.w800, fontSize: 11)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Slider(
+            min: timeline.earliest.toDouble(),
+            max: math.max(timeline.latest, timeline.earliest + 1).toDouble(),
+            value: value.toDouble().clamp(timeline.earliest.toDouble(), math.max(timeline.latest, timeline.earliest + 1).toDouble()),
+            onChanged: (_) {},
+            onChangeEnd: (v) => onChanged(v.round()),
+          ),
+        ),
+        Text(timeline.eventCount.toString() + ' events', style: const TextStyle(fontSize: 10, color: Color(0xFF9FB4CA))),
+        const SizedBox(width: 8),
+        FilledButton.tonal(onPressed: frame == null ? null : onLive, child: const Text('LIVE')),
+      ]),
+    );
+  }
+}
+
 class _GraphPainter extends CustomPainter {
-  const _GraphPainter({required this.scene, required this.camera, required this.selectedId});
+  const _GraphPainter({
+    required this.scene,
+    required this.camera,
+    required this.selectedId,
+    required this.changedEntityIds,
+    required this.impactedTopicIds,
+    required this.runningVerification,
+    required this.passedVerification,
+    required this.failedVerification,
+    required this.activityNodeId,
+    required this.historicalEntityIds,
+  });
   final GraphScene scene;
   final Camera3d camera;
   final String? selectedId;
+  final Set<String> changedEntityIds;
+  final Set<String> impactedTopicIds;
+  final Set<String> runningVerification;
+  final Set<String> passedVerification;
+  final Set<String> failedVerification;
+  final String? activityNodeId;
+  final Set<String> historicalEntityIds;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -251,6 +535,7 @@ class _GraphPainter extends CustomPainter {
 
     final projected = {for (final n in scene.nodes) n.id: camera.project(n.position, size)};
     for (final cluster in scene.clusters) {
+      if (historicalEntityIds.isNotEmpty && !historicalEntityIds.contains(cluster.ownerId)) continue;
       final p = projected[cluster.ownerId];
       if (p == null) continue;
       final r = math.max(42.0, cluster.radius * p.scale);
@@ -263,37 +548,49 @@ class _GraphPainter extends CustomPainter {
     }
 
     for (final edge in scene.edges) {
+      if (historicalEntityIds.isNotEmpty && (!historicalEntityIds.contains(edge.from) || !historicalEntityIds.contains(edge.to))) continue;
       final a = projected[edge.from];
       final b = projected[edge.to];
       if (a == null || b == null) continue;
-      final color = _edgeColor(edge.type);
+      final changed = changedEntityIds.contains(edge.id) || changedEntityIds.contains(edge.from) || changedEntityIds.contains(edge.to);
+      final vStatus = failedVerification.contains(edge.from) || failedVerification.contains(edge.to)
+          ? 'failed'
+          : runningVerification.contains(edge.from) || runningVerification.contains(edge.to)
+          ? 'running'
+          : passedVerification.contains(edge.from) || passedVerification.contains(edge.to)
+          ? 'passed'
+          : null;
+      final color = changed
+          ? const Color(0xFFFBBF24)
+          : vStatus != null && edge.type == 'validated-by'
+          ? _verificationColor(vStatus)
+          : _edgeColor(edge.type);
       canvas.drawLine(
         a.offset,
         b.offset,
         Paint()
-          ..color = color.withValues(alpha: .58)
-          ..strokeWidth = 1.4,
+          ..color = color.withValues(alpha: changed ? .94 : .58)
+          ..strokeWidth = changed ? 2.7 : vStatus != null && edge.type == 'validated-by' ? 2.5 : 1.4,
       );
     }
 
     final ordered = [...scene.nodes]
       ..sort((a, b) => projected[a.id]!.depth.compareTo(projected[b.id]!.depth));
     for (final node in ordered) {
+      if (historicalEntityIds.isNotEmpty && !historicalEntityIds.contains(node.id)) continue;
       final p = projected[node.id]!;
       final selected = node.id == selectedId;
       final base = node.kind == 'root' ? 18.0 : node.kind == 'topic' ? 13.0 : node.kind == 'claim' ? 8.0 : 5.8;
       final radius = math.max(node.isChild ? 4.5 : 8.0, base * p.scale);
       final color = _nodeColor(node);
-      if (selected) {
-        canvas.drawCircle(
-          p.offset,
-          radius + 7,
-          Paint()
-            ..color = Colors.white.withValues(alpha: .92)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2.4,
-        );
-      }
+
+      if (node.kind == 'topic' && impactedTopicIds.contains(node.id)) _ring(canvas, p.offset, radius + 14, const Color(0xFFA78BFA), 2.2);
+      if (changedEntityIds.contains(node.id)) _ring(canvas, p.offset, radius + 11, const Color(0xFFFBBF24), 2.4);
+      final vStatus = failedVerification.contains(node.id) ? 'failed' : runningVerification.contains(node.id) ? 'running' : passedVerification.contains(node.id) ? 'passed' : null;
+      if (vStatus != null) _ring(canvas, p.offset, radius + 8, _verificationColor(vStatus), 2.5);
+      if (activityNodeId == node.id) _ring(canvas, p.offset, radius + 17, const Color(0xFF67E8F9), 2.4);
+      if (selected) _ring(canvas, p.offset, radius + 7, Colors.white, 2.4);
+
       canvas.drawCircle(p.offset, radius, Paint()..color = color);
       final tp = TextPainter(
         text: TextSpan(
@@ -310,6 +607,10 @@ class _GraphPainter extends CustomPainter {
       )..layout(maxWidth: node.isChild ? 230 : 190);
       tp.paint(canvas, p.offset + Offset(radius + 6, -tp.height / 2));
     }
+  }
+
+  void _ring(Canvas canvas, Offset center, double radius, Color color, double width) {
+    canvas.drawCircle(center, radius, Paint()..color = color.withValues(alpha: .9)..style = PaintingStyle.stroke..strokeWidth = width);
   }
 
   Color _nodeColor(VisualNode node) => switch (node.kind) {
@@ -334,6 +635,13 @@ class _GraphPainter extends CustomPainter {
     'validated-by' => const Color(0xFF4ADE80),
     'limits' => const Color(0xFFFB7185),
     _ => const Color(0xFF64748B),
+  };
+
+  Color _verificationColor(String status) => switch (status) {
+    'failed' => const Color(0xFFF87171),
+    'running' => const Color(0xFF67E8F9),
+    'passed' => const Color(0xFF86EFAC),
+    _ => const Color(0xFF94A3B8),
   };
 
   @override

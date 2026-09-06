@@ -81,11 +81,12 @@
       "status": "partial",
       "evidence": [
         "intelligence/change-intelligence.mjs",
-        "site/local-live.js"
+        "site/local-live.js",
+        "viewer_flutter/lib/live/workspace_live.dart",
+        "viewer_flutter/lib/widgets/graph_view.dart"
       ],
       "missing": [
-        "semantic file-to-entity mapping beyond registered provenance",
-        "full Flutter overlay parity"
+        "semantic file-to-entity mapping beyond registered provenance"
       ]
     },
     {
@@ -109,10 +110,11 @@
       "status": "partial",
       "evidence": [
         "intelligence/research-replay.mjs",
-        "site/local-live.js"
+        "site/local-live.js",
+        "viewer_flutter/lib/live/workspace_live.dart",
+        "viewer_flutter/lib/widgets/graph_view.dart"
       ],
       "missing": [
-        "Flutter timeline scrubber",
         "checkpoint graph historical masking with generated checkpoint entity sets"
       ]
     },
@@ -137,10 +139,12 @@
       "status": "partial",
       "evidence": [
         "intelligence/activity-stream.mjs",
-        "site/local-live.js"
+        "site/local-live.js",
+        "viewer_flutter/lib/live/workspace_live.dart",
+        "viewer_flutter/lib/widgets/graph_view.dart"
       ],
       "missing": [
-        "Flutter activity overlay"
+        "task JSONL event mapping"
       ]
     },
     {
@@ -150,10 +154,11 @@
       "status": "partial",
       "evidence": [
         "scripts/serve-local-viewer.mjs",
-        "site/local-live.js"
+        "site/local-live.js",
+        "viewer_flutter/lib/live/workspace_live.dart",
+        "viewer_flutter/lib/widgets/graph_view.dart"
       ],
       "missing": [
-        "Flutter live client",
         "conversation sync"
       ]
     },
