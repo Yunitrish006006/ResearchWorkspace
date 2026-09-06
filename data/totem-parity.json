@@ -107,44 +107,38 @@
       "id": "replay",
       "totem": "Development Replay",
       "research": "Research Replay",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "intelligence/research-replay.mjs",
         "site/local-live.js",
         "viewer_flutter/lib/live/workspace_live.dart",
-        "viewer_flutter/lib/widgets/graph_view.dart"
-      ],
-      "missing": [
-        "checkpoint graph historical masking with generated checkpoint entity sets"
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "scripts/serve-local-viewer.mjs",
+        "scripts/validate-replay.mjs"
       ]
     },
     {
       "id": "agent-adapter",
       "totem": "Codex Agent Adapter",
       "research": "Codex Research Agent Adapter",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
-        "intelligence/agent-adapter.mjs"
-      ],
-      "missing": [
-        "Bridge task execution",
-        "JSONL activity mapping",
-        "post-task refresh"
+        "intelligence/agent-adapter.mjs",
+        "scripts/serve-local-viewer.mjs",
+        "scripts/validate-agent-adapter.mjs"
       ]
     },
     {
       "id": "agent-activity",
       "totem": "Agent Activity",
       "research": "Research Agent Activity",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "intelligence/activity-stream.mjs",
         "site/local-live.js",
         "viewer_flutter/lib/live/workspace_live.dart",
-        "viewer_flutter/lib/widgets/graph_view.dart"
-      ],
-      "missing": [
-        "task JSONL event mapping"
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "intelligence/agent-adapter.mjs"
       ]
     },
     {
@@ -156,10 +150,12 @@
         "scripts/serve-local-viewer.mjs",
         "site/local-live.js",
         "viewer_flutter/lib/live/workspace_live.dart",
-        "viewer_flutter/lib/widgets/graph_view.dart"
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "intelligence/conversation-sync.mjs",
+        "intelligence/agent-adapter.mjs"
       ],
       "missing": [
-        "conversation sync"
+        "remote bridge controller parity"
       ]
     },
     {
@@ -207,8 +203,12 @@
       "id": "conversation-sync",
       "totem": "Viewer/Discord conversation sync",
       "research": "Research conversation sync",
-      "status": "missing",
-      "evidence": []
+      "status": "implemented",
+      "evidence": [
+        "intelligence/conversation-sync.mjs",
+        "scripts/serve-local-viewer.mjs",
+        "scripts/validate-conversation-sync.mjs"
+      ]
     },
     {
       "id": "codex-discord",

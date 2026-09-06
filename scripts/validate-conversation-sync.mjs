@@ -1,0 +1,15 @@
+import assert from "node:assert/strict";
+import { createConversationSync } from "../intelligence/conversation-sync.mjs";
+let tick=0;
+const c=createConversationSync({now:()=>String(++tick),entryLimit:3});
+const first=c.append({source:"viewer",kind:"prompt",text:"hello",clientMessageId:"m1",conversationId:"conv1"});
+assert.equal(first.duplicate,false);
+assert.equal(c.append({source:"viewer",kind:"prompt",text:"hello",clientMessageId:"m1"}).duplicate,true);
+c.setDraft({clientId:"viewer",text:"draft"});
+assert.equal(c.snapshot().draft.text,"draft");
+c.linkTask("task:1","conv1");
+c.append({source:"workspace",kind:"progress",text:"working",taskId:"task:1"});
+assert.equal(c.snapshot().entries.at(-1).conversationId,"conv1");
+c.clearDraft("viewer");
+assert.equal(c.snapshot().draft,null);
+console.log("Conversation Sync OK");
