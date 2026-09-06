@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "repositories": [
+    {
+      "id": "research-workspace",
+      "role": "coordination",
+      "name": "ResearchWorkspace",
+      "repository": "https://github.com/Yunitrish006006/ResearchWorkspace.git",
+      "defaultBranch": "main"
+    },
+    {
+      "id": "thesis",
+      "role": "canonical-thesis-source",
+      "name": "Three-Factor-Digital-Twin",
+      "repository": "https://github.com/Yunitrish006006/Three-Factor-Digital-Twin.git",
+      "defaultBranch": "main",
+      "envPath": "RESEARCH_THESIS_REPO",
+      "authoritativePaths": [
+        "docs/thesis/",
+        "docs/experiments/",
+        "docs/models/",
+        "docs/papers/",
+        "openspec/",
+        "digital_twin/",
+        "scripts/",
+        "tests/"
+      ]
+    }
+  ]
+}

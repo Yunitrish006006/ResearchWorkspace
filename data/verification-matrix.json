@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "checks": [
+    {
+      "id": "E1",
+      "title": "Canonical full-field reconstruction",
+      "status": "REPRODUCIBLE",
+      "claimIds": [
+        "claim-baseline"
+      ],
+      "evidenceClass": "controlled simulation"
+    },
+    {
+      "id": "E2",
+      "title": "IDW baseline comparison",
+      "status": "REPRODUCIBLE",
+      "claimIds": [
+        "claim-baseline"
+      ],
+      "evidenceClass": "controlled simulation"
+    },
+    {
+      "id": "E3",
+      "title": "Ablation and reproducibility",
+      "status": "REPRODUCIBLE",
+      "claimIds": [],
+      "evidenceClass": "robustness"
+    },
+    {
+      "id": "E4",
+      "title": "Appliance impact-learning checks",
+      "status": "BOUNDED",
+      "claimIds": [],
+      "evidenceClass": "controlled checks"
+    },
+    {
+      "id": "E5",
+      "title": "Window-condition matrix",
+      "status": "REPRODUCIBLE",
+      "claimIds": [],
+      "evidenceClass": "boundary sensitivity"
+    },
+    {
+      "id": "E6",
+      "title": "Hybrid residual robustness",
+      "status": "REPRODUCIBLE",
+      "claimIds": [
+        "claim-hybrid"
+      ],
+      "evidenceClass": "controlled simulation"
+    },
+    {
+      "id": "E7",
+      "title": "Real-bedroom sparse calibration",
+      "status": "REPRODUCIBLE",
+      "claimIds": [
+        "claim-e7"
+      ],
+      "evidenceClass": "real target-point"
+    },
+    {
+      "id": "E8",
+      "title": "Before/after intervention",
+      "status": "PENDING",
+      "claimIds": [
+        "claim-causal",
+        "claim-action"
+      ],
+      "evidenceClass": "intervention"
+    },
+    {
+      "id": "E9",
+      "title": "Public task-aligned benchmark",
+      "status": "CONDITIONAL",
+      "claimIds": [
+        "claim-public",
+        "claim-persistence"
+      ],
+      "evidenceClass": "public benchmark"
+    }
+  ]
+}
