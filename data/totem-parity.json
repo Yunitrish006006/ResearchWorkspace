@@ -178,17 +178,16 @@
       "id": "repository-sync",
       "totem": "Sibling repository refresh",
       "research": "Canonical thesis repository refresh",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         ".github/workflows/pages.yml",
         "data/repositories.json",
         "intelligence/repository-status.mjs",
         "intelligence/claim-evidence-matrix.mjs",
         "intelligence/source-index.mjs",
-        "intelligence/source-mapping.mjs"
-      ],
-      "missing": [
-        "artifact drift overlay"
+        "intelligence/source-mapping.mjs",
+        "intelligence/artifact-drift.mjs",
+        "scripts/validate-artifact-drift.mjs"
       ]
     },
     {

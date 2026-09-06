@@ -8,6 +8,7 @@ import { researchChangeIntelligence } from "../intelligence/change-intelligence.
 import { replayFrame, replayTimeline } from "../intelligence/research-replay.mjs";
 import { renderGraphV2 } from "./render-graph-v2.mjs";
 import { loadVerificationState } from "../intelligence/verification-state.mjs";
+import { artifactDriftStatus } from "../intelligence/artifact-drift.mjs";
 import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
 import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
 
@@ -36,6 +37,7 @@ switch (command) {
   }
   case "repository-status": print(repositoryStatusSummary({ knowledge })); break;
   case "claim-evidence-matrix": print(buildClaimEvidenceMatrix(knowledge)); break;
+  case "artifact-drift": print(artifactDriftStatus()); break;
   case "render-graph": print(renderGraphV2({ knowledge })); break;
   default:
     console.error(`Usage:
@@ -54,6 +56,7 @@ switch (command) {
   node scripts/research-intelligence.mjs build-index
   node scripts/research-intelligence.mjs repository-status
   node scripts/research-intelligence.mjs claim-evidence-matrix
+  node scripts/research-intelligence.mjs artifact-drift
   node scripts/research-intelligence.mjs render-graph`);
     process.exitCode = 2;
 }

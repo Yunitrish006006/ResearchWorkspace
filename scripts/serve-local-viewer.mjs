@@ -17,6 +17,7 @@ import { buildSourceIndex, thesisRoot } from "../intelligence/source-index.mjs";
 import { renderGraphV2 } from "./render-graph-v2.mjs";
 import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
 import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
+import { artifactDriftStatus } from "../intelligence/artifact-drift.mjs";
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const root=path.resolve(here,".."),site=path.join(root,"site"),flutterWeb=path.join(root,"viewer_flutter","build","web");
@@ -130,6 +131,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==="/api/graph-data"&&req.method==="GET")return json(req,res,200,buildGraphViewModel());
     if(url.pathname==="/api/repository-status"&&req.method==="GET")return json(req,res,200,repositoryStatusSummary());
     if(url.pathname==="/api/claim-evidence-matrix"&&req.method==="GET")return json(req,res,200,buildClaimEvidenceMatrix());
+    if(url.pathname==="/api/artifact-drift"&&req.method==="GET")return json(req,res,200,artifactDriftStatus());
     if(url.pathname==="/api/viewer-settings"&&req.method==="GET")return json(req,res,200,loadSettings());
     if(url.pathname==="/api/viewer-settings"&&req.method==="POST")return json(req,res,200,saveSettings(await body(req)));
     if(url.pathname==="/api/activity"&&req.method==="GET")return json(req,res,200,{events:activityEvents({after:Number(url.searchParams.get("after")||0),limit:Number(url.searchParams.get("limit")||200)})});

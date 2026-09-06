@@ -11,6 +11,7 @@ import { renderGraphV2 } from "../scripts/render-graph-v2.mjs";
 import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
 import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
 import { loadVerificationState } from "../intelligence/verification-state.mjs";
+import { artifactDriftStatus } from "../intelligence/artifact-drift.mjs";
 
 const SERVER_NAME="research-workspace-intelligence";
 const SERVER_VERSION="0.1.0";
@@ -30,6 +31,7 @@ const TOOLS=Object.freeze([
   {name:"replay",description:"Return Research Replay timeline or one historical frame.",inputSchema:schema({sequence:{type:["integer","null"],default:null}})},
   {name:"repository_status",description:"Report local ResearchWorkspace/thesis repository branch, HEAD, dirty state and snapshot drift.",inputSchema:schema({})},
   {name:"claim_evidence_matrix",description:"Return the current Claim-to-Evidence traceability matrix.",inputSchema:schema({})},
+  {name:"artifact_drift",description:"Detect thesis-facing artifact synchronization drift from Git history and dirty files.",inputSchema:schema({})},
   {name:"refresh_index",description:"Rebuild the thesis source/document index and regenerate viewer data.",inputSchema:schema({})},
   {name:"summary",description:"Return counts and snapshot metadata for ResearchWorkspace.",inputSchema:schema({})}
 ]);
@@ -51,6 +53,7 @@ function callTool(name,args={}){
     case"replay":return args.sequence==null?replayTimeline():replayFrame(args.sequence);
     case"repository_status":return repositoryStatusSummary({knowledge});
     case"claim_evidence_matrix":return buildClaimEvidenceMatrix(knowledge);
+    case"artifact_drift":return artifactDriftStatus();
     case"refresh_index":{
       const index=buildSourceIndex();
       const graph=renderGraphV2({knowledge});
