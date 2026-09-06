@@ -77,6 +77,13 @@ class WorkspaceLiveClient {
   Future<PromptSubmission> submitPrompt(String prompt) async =>
       PromptSubmission.fromJson(await _post('/api/prompt', {'prompt': prompt}));
 
+  Future<ConversationSnapshot> conversation({int after = 0}) async =>
+      ConversationSnapshot.fromJson(await _get('/api/conversation', {'after': after.toString()}));
+
+  Future<void> updateConversationDraft(String clientId, String text) async {
+    await _post('/api/conversation/draft', {'clientId': clientId, 'text': text});
+  }
+
   Future<AdapterStatus> adapterStatus() async =>
       AdapterStatus.fromJson(await _get('/api/agent-adapter'));
 
@@ -299,6 +306,72 @@ class PromptSubmission {
       score: (orchestration['score'] as num?)?.toInt() ?? 0,
       event: ActivityEvent.fromJson(Map<String, dynamic>.from(json['event'] as Map? ?? const {})),
       execution: json['execution'] as String? ?? 'unknown',
+    );
+  }
+}
+
+class ConversationEntry {
+  const ConversationEntry({
+    required this.revision,
+    required this.source,
+    required this.kind,
+    required this.text,
+    this.timestamp,
+    this.taskId,
+    this.status,
+    this.conversationId,
+  });
+  final int revision;
+  final String source;
+  final String kind;
+  final String text;
+  final String? timestamp;
+  final String? taskId;
+  final String? status;
+  final String? conversationId;
+
+  factory ConversationEntry.fromJson(Map<String, dynamic> json) => ConversationEntry(
+    revision: (json['revision'] as num?)?.toInt() ?? 0,
+    source: json['source'] as String? ?? 'workspace',
+    kind: json['kind'] as String? ?? 'status',
+    text: json['text'] as String? ?? '',
+    timestamp: json['timestamp'] as String?,
+    taskId: json['taskId'] as String?,
+    status: json['status'] as String?,
+    conversationId: json['conversationId'] as String?,
+  );
+}
+
+class ConversationDraft {
+  const ConversationDraft({required this.revision, required this.clientId, required this.text, this.timestamp});
+  final int revision;
+  final String clientId;
+  final String text;
+  final String? timestamp;
+
+  factory ConversationDraft.fromJson(Map<String, dynamic> json) => ConversationDraft(
+    revision: (json['revision'] as num?)?.toInt() ?? 0,
+    clientId: json['clientId'] as String? ?? '',
+    text: json['text'] as String? ?? '',
+    timestamp: json['timestamp'] as String?,
+  );
+}
+
+class ConversationSnapshot {
+  const ConversationSnapshot({required this.latestRevision, required this.entries, this.draft});
+  final int latestRevision;
+  final List<ConversationEntry> entries;
+  final ConversationDraft? draft;
+
+  factory ConversationSnapshot.fromJson(Map<String, dynamic> json) {
+    final rawDraft = json['draft'];
+    return ConversationSnapshot(
+      latestRevision: (json['latestRevision'] as num?)?.toInt() ?? 0,
+      entries: (json['entries'] as List? ?? const [])
+        .whereType<Map>()
+        .map((x) => ConversationEntry.fromJson(Map<String, dynamic>.from(x)))
+        .toList(growable: false),
+      draft: rawDraft is Map ? ConversationDraft.fromJson(Map<String, dynamic>.from(rawDraft)) : null,
     );
   }
 }

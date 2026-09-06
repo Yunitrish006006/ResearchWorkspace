@@ -41,6 +41,10 @@ void main() {
           return http.Response(jsonEncode({'enabled':true,'execution':'opt-in-ready'}),200);
         case '/api/prompt':
           return http.Response(jsonEncode({'execution':'codex','event':{'sequence':4,'type':'prompt_submitted','summary':'prompt'},'orchestration':{'mode':'assisted','score':4}}),202);
+        case '/api/conversation':
+          return http.Response(jsonEncode({'latestRevision':3,'draft':{'revision':2,'clientId':'discord','text':'draft'},'entries':[{'revision':3,'source':'discord','kind':'prompt','text':'sync me'}]}),200);
+        case '/api/conversation/draft':
+          return http.Response(jsonEncode({'status':'accepted'}),202);
       }
       return http.Response('not found',404);
     });
@@ -57,6 +61,11 @@ void main() {
     expect((await client.viewerSettings()).replayEnabled,isTrue);
     expect((await client.adapterStatus()).enabled,isTrue);
     expect((await client.submitPrompt('test')).mode,'assisted');
+    final conversation=await client.conversation(after:0);
+    expect(conversation.latestRevision,3);
+    expect(conversation.entries.single.source,'discord');
+    expect(conversation.draft!.text,'draft');
+    await client.updateConversationDraft('viewer:test','draft text');
     client.close();
   });
 }

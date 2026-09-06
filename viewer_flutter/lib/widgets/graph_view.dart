@@ -27,12 +27,18 @@ class _GraphViewState extends State<GraphView> {
 
   WorkspaceLiveClient? _client;
   Timer? _pollTimer;
+  Timer? _conversationTimer;
+  Timer? _draftDebounce;
   RepositoryStatus? _repoStatus;
   ResearchChange? _change;
   VerificationState? _verification;
   ArtifactDrift? _artifactDrift;
   ActivityEvent? _activity;
   final List<ActivityEvent> _activityLog = <ActivityEvent>[];
+  final List<ConversationEntry> _conversationLog = <ConversationEntry>[];
+  int _conversationRevision = 0;
+  ConversationDraft? _conversationDraft;
+  final String _conversationClientId = 'viewer:' + DateTime.now().microsecondsSinceEpoch.toString();
   ReplayTimeline? _timeline;
   ReplayFrame? _replayFrame;
   ViewerSettings _settings = const ViewerSettings(
@@ -48,10 +54,16 @@ class _GraphViewState extends State<GraphView> {
   final TextEditingController _promptController = TextEditingController();
   FloatingPanelDock _detailsDock = FloatingPanelDock.topRight;
   FloatingPanelDock _activityDock = FloatingPanelDock.topCenter;
+  FloatingPanelDock _conversationDock = FloatingPanelDock.centerLeft;
   bool _detailsCollapsed = false;
   bool _activityCollapsed = true;
+  bool _conversationCollapsed = true;
 
   GraphScene get _scene => buildGraphScene(_data, expanded: _expanded);
+  bool get _conversationAvailable {
+    final host = Uri.base.host.toLowerCase();
+    return host == '127.0.0.1' || host == 'localhost' || host == '::1';
+  }
 
   @override
   void initState() {
@@ -69,6 +81,8 @@ class _GraphViewState extends State<GraphView> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _conversationTimer?.cancel();
+    _draftDebounce?.cancel();
     _client?.close();
     _promptController.dispose();
     super.dispose();
@@ -87,6 +101,10 @@ class _GraphViewState extends State<GraphView> {
     if (client != null) {
       await _poll();
       _pollTimer = Timer.periodic(const Duration(milliseconds: 2200), (_) => _poll());
+      if (_conversationAvailable) {
+        await _pollConversation();
+        _conversationTimer = Timer.periodic(const Duration(milliseconds: 1200), (_) => _pollConversation());
+      }
     }
   }
 
@@ -132,6 +150,39 @@ class _GraphViewState extends State<GraphView> {
     } catch (error) {
       if (mounted) setState(() => _liveError = error.toString());
     }
+  }
+
+  Future<void> _pollConversation() async {
+    final client = _client;
+    if (client == null || !_conversationAvailable) return;
+    try {
+      final snapshot = await client.conversation(after: _conversationRevision);
+      if (!mounted) return;
+      setState(() {
+        final known = _conversationLog.map((entry) => entry.revision).toSet();
+        for (final entry in snapshot.entries) {
+          if (!known.contains(entry.revision)) _conversationLog.add(entry);
+        }
+        _conversationLog.sort((a, b) => a.revision.compareTo(b.revision));
+        if (_conversationLog.length > 120) {
+          _conversationLog.removeRange(0, _conversationLog.length - 120);
+        }
+        _conversationRevision = snapshot.latestRevision;
+        _conversationDraft = snapshot.draft;
+      });
+    } catch (_) {
+      // Conversation sync is private and optional; graph/live polling remains independent.
+    }
+  }
+
+  void _scheduleDraftSync(String text) {
+    if (!_conversationAvailable || _client == null) return;
+    _draftDebounce?.cancel();
+    _draftDebounce = Timer(const Duration(milliseconds: 350), () async {
+      try {
+        await _client?.updateConversationDraft(_conversationClientId, text);
+      } catch (_) {}
+    });
   }
 
   void _reset() => setState(() {
@@ -205,6 +256,7 @@ class _GraphViewState extends State<GraphView> {
       setState(() {
         _activity = result.event;
         _promptController.clear();
+        _conversationDraft = null;
         _liveError = null;
       });
       await _poll();
@@ -348,6 +400,26 @@ class _GraphViewState extends State<GraphView> {
               error: _liveError,
             ),
           ),
+        if (_client != null && _conversationAvailable && (_conversationLog.isNotEmpty || _conversationDraft != null))
+          FloatingPanel(
+            title: 'Research Conversation',
+            icon: Icons.forum_outlined,
+            dock: _conversationDock,
+            collapsed: _conversationCollapsed,
+            width: math.min(430, mediaWidth - 24),
+            expandedHeight: 300,
+            onCollapsedChanged: (value) => setState(() => _conversationCollapsed = value),
+            onDockChanged: (value) => setState(() => _conversationDock = value),
+            child: ListView(
+              padding: const EdgeInsets.all(10),
+              children: [
+                if (_conversationDraft != null && _conversationDraft!.clientId != _conversationClientId)
+                  _ConversationDraftCard(draft: _conversationDraft!),
+                for (final entry in _conversationLog.reversed.take(30))
+                  _ConversationEntryCard(entry: entry),
+              ],
+            ),
+          ),
         if (_client != null && _settings.agentActivityEnabled && _activityLog.isNotEmpty)
           FloatingPanel(
             title: 'Research Agent Activity',
@@ -414,6 +486,7 @@ class _GraphViewState extends State<GraphView> {
                     minLines: 1,
                     maxLines: 3,
                     decoration: const InputDecoration(hintText: 'Research prompt', isDense: true),
+                    onChanged: _scheduleDraftSync,
                     onSubmitted: (_) => _submitPrompt(),
                   ),
                 ),
@@ -478,6 +551,61 @@ class _InfoItem extends StatelessWidget {
     ),
     child: Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFFD7E5F4))),
   );
+}
+
+class _ConversationDraftCard extends StatelessWidget {
+  const _ConversationDraftCard({required this.draft});
+  final ConversationDraft draft;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 8),
+    padding: const EdgeInsets.all(9),
+    decoration: BoxDecoration(
+      color: const Color(0xFF1E1627),
+      border: Border.all(color: const Color(0xFF6D4C78)),
+      borderRadius: BorderRadius.circular(9),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('REMOTE DRAFT', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 9, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 5),
+        CollapsibleMessage(text: draft.text, style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 11, height: 1.35)),
+      ],
+    ),
+  );
+}
+
+class _ConversationEntryCard extends StatelessWidget {
+  const _ConversationEntryCard({required this.entry});
+  final ConversationEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = entry.kind == 'prompt'
+      ? const Color(0xFF67E8F9)
+      : entry.status == 'failed'
+      ? const Color(0xFFF87171)
+      : const Color(0xFF86EFAC);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B1B29),
+        border: Border.all(color: accent.withValues(alpha: .4)),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text((entry.source + ' · ' + entry.kind).toUpperCase(), style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 5),
+          CollapsibleMessage(text: entry.text, style: const TextStyle(color: Color(0xFFD7E5F4), fontSize: 11, height: 1.35)),
+        ],
+      ),
+    );
+  }
 }
 
 class _ActivityCard extends StatelessWidget {
