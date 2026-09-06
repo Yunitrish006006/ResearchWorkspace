@@ -22,7 +22,8 @@
       "research": "Source / Document Index",
       "status": "implemented",
       "evidence": [
-        "intelligence/source-index.mjs"
+        "intelligence/source-index.mjs",
+        "intelligence/source-layer.mjs"
       ]
     },
     {
@@ -71,7 +72,9 @@
       "status": "implemented",
       "evidence": [
         "viewer_flutter/lib/model/graph_scene.dart",
-        "site/research-graph-v2.js"
+        "site/research-graph-v2.js",
+        "intelligence/source-layer.mjs",
+        "scripts/validate-source-layer.mjs"
       ]
     },
     {
