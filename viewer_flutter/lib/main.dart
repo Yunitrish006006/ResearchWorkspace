@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'model/graph_data.dart';
-import 'widgets/graph_view.dart';
+import 'widgets/workspace_graph_host.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +27,6 @@ class ResearchWorkspaceApp extends StatelessWidget {
       ),
       scaffoldBackgroundColor: const Color(0xFF050B14),
     ),
-    home: Scaffold(body: SafeArea(child: GraphView(data: data))),
+    home: Scaffold(body: SafeArea(child: WorkspaceGraphHost(initialData: data))),
   );
 }

@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../model/graph_data.dart';
 
 class WorkspaceLiveClient {
   WorkspaceLiveClient._(this.base, this._client);
+  WorkspaceLiveClient.forTesting(this.base, this._client);
   final Uri base;
   final http.Client _client;
 
@@ -41,6 +43,9 @@ class WorkspaceLiveClient {
     }
     return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
   }
+
+  Future<GraphData> graphData() async =>
+      GraphData.fromJson(await _get('/api/graph-data'));
 
   Future<RepositoryStatus> repositoryStatus() async =>
       RepositoryStatus.fromJson(await _get('/api/repository-status'));

@@ -15,6 +15,7 @@ class GraphView extends StatefulWidget {
 }
 
 class _GraphViewState extends State<GraphView> {
+  late GraphData _data;
   Camera3d _camera = const Camera3d();
   final Set<String> _expanded = {};
   String? _selectedId;
@@ -42,12 +43,19 @@ class _GraphViewState extends State<GraphView> {
   bool _submitting = false;
   final TextEditingController _promptController = TextEditingController();
 
-  GraphScene get _scene => buildGraphScene(widget.data, expanded: _expanded);
+  GraphScene get _scene => buildGraphScene(_data, expanded: _expanded);
 
   @override
   void initState() {
     super.initState();
+    _data = _data;
     _probe();
+  }
+
+  @override
+  void didUpdateWidget(covariant GraphView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.data, _data)) _data = _data;
   }
 
   @override
@@ -79,6 +87,7 @@ class _GraphViewState extends State<GraphView> {
     if (client == null) return;
     try {
       final results = await Future.wait<Object>([
+        client.graphData(),
         client.repositoryStatus(),
         client.changeIntelligence(),
         client.verificationState(),
@@ -89,16 +98,17 @@ class _GraphViewState extends State<GraphView> {
         client.adapterStatus(),
       ]);
       if (!mounted) return;
-      final batch = results[4] as ActivityBatch;
+      final batch = results[5] as ActivityBatch;
       setState(() {
-        _repoStatus = results[0] as RepositoryStatus;
-        _change = results[1] as ResearchChange;
-        _verification = results[2] as VerificationState;
-        _artifactDrift = results[3] as ArtifactDrift;
+        _data = results[0] as GraphData;
+        _repoStatus = results[1] as RepositoryStatus;
+        _change = results[2] as ResearchChange;
+        _verification = results[3] as VerificationState;
+        _artifactDrift = results[4] as ArtifactDrift;
         if (batch.events.isNotEmpty) _activity = batch.events.last;
-        _timeline = results[5] as ReplayTimeline;
-        _settings = results[6] as ViewerSettings;
-        _adapter = results[7] as AdapterStatus;
+        _timeline = results[6] as ReplayTimeline;
+        _settings = results[7] as ViewerSettings;
+        _adapter = results[8] as AdapterStatus;
         _liveError = null;
       });
     } catch (error) {
@@ -115,9 +125,9 @@ class _GraphViewState extends State<GraphView> {
   void _expandAll() => setState(() {
     _expanded
       ..clear()
-      ..addAll(widget.data.topics.map((x) => x.id))
-      ..addAll(widget.data.claims.map((x) => x.id))
-      ..addAll(widget.data.sourceAreas.map((x) => x.id));
+      ..addAll(_data.topics.map((x) => x.id))
+      ..addAll(_data.claims.map((x) => x.id))
+      ..addAll(_data.sourceAreas.map((x) => x.id));
     _camera = _camera.copyWith(zoom: .58, panX: 0, panY: 0);
   });
 
@@ -130,7 +140,7 @@ class _GraphViewState extends State<GraphView> {
         if (_expanded.contains(id)) {
           _expanded.remove(id);
           if (node.kind == 'topic') {
-            for (final claim in widget.data.claims.where((x) => x.ownerId == id)) {
+            for (final claim in _data.claims.where((x) => x.ownerId == id)) {
               _expanded.remove(claim.id);
             }
           }
@@ -283,7 +293,7 @@ class _GraphViewState extends State<GraphView> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text('ResearchWorkspace', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                Text('3D Research Graph · ' + widget.data.snapshotDate, style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11)),
+                Text('3D Research Graph · ' + _data.snapshotDate, style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11)),
                 const SizedBox(height: 10),
                 Wrap(spacing: 7, runSpacing: 7, children: [
                   FilledButton.tonal(onPressed: _reset, child: const Text('總覽')),
@@ -293,9 +303,9 @@ class _GraphViewState extends State<GraphView> {
                 ]),
                 const SizedBox(height: 8),
                 Text(
-                  widget.data.topics.length.toString() + ' topics · ' +
-                  widget.data.claims.length.toString() + ' claims · ' +
-                  widget.data.evidence.length.toString() + ' evidence',
+                  _data.topics.length.toString() + ' topics · ' +
+                  _data.claims.length.toString() + ' claims · ' +
+                  _data.evidence.length.toString() + ' evidence',
                   style: const TextStyle(fontSize: 11, color: Color(0xFFBDD0E5)),
                 ),
                 if (_probing) const Padding(
