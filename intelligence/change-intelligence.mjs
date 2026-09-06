@@ -1,4 +1,9 @@
-import { impactAnalysis, loadKnowledge } from "./research-knowledge.mjs";
+import fs from "node:fs";
+import path from "node:path";
+import { impactAnalysis, loadKnowledge, workspaceRoot } from "./research-knowledge.mjs";
+import { repositoryStatusSummary } from "./repository-status.mjs";
+
+const statePath=path.join(workspaceRoot,".research-index","change-intelligence.json");
 
 export function semanticSnapshot(knowledge = loadKnowledge()) {
   return Object.freeze({
@@ -28,17 +33,32 @@ export function diffSnapshots(before, after) {
   });
 }
 
-export function researchChangeIntelligence({ changedFiles = [], changedTopics = [], before = null, knowledge = loadKnowledge() } = {}) {
+export function loadResearchChangeIntelligence() {
+  if (!fs.existsSync(statePath)) return null;
+  return JSON.parse(fs.readFileSync(statePath,"utf8"));
+}
+
+export function researchChangeIntelligence({ changedFiles = null, changedTopics = [], before = null, knowledge = loadKnowledge(), persist = false } = {}) {
+  const repositoryStatus=repositoryStatusSummary({knowledge});
+  const thesis=repositoryStatus.repositories.find((x)=>x.id==="thesis");
+  const effectiveFiles=changedFiles?.length ? changedFiles : (thesis?.changedFiles ?? []);
   const after = semanticSnapshot(knowledge);
-  const semanticDiff = before ? diffSnapshots(before, after) : { addedEntityIds:[],removedEntityIds:[],addedRelationIds:[],removedRelationIds:[] };
-  const impact = impactAnalysis({ changedFiles, changedTopics }, knowledge);
-  return Object.freeze({
+  const previousSnapshot=before ?? loadResearchChangeIntelligence()?.snapshot ?? null;
+  const semanticDiff = previousSnapshot ? diffSnapshots(previousSnapshot, after) : { addedEntityIds:[],removedEntityIds:[],addedRelationIds:[],removedRelationIds:[] };
+  const impact = impactAnalysis({ changedFiles:effectiveFiles, changedTopics }, knowledge);
+  const result={
     generatedAt:new Date().toISOString(),
-    changedFiles,
+    changedFiles:effectiveFiles,
     semanticDiff,
     changedEntityIds:[...new Set([...semanticDiff.addedEntityIds, ...semanticDiff.removedEntityIds, ...impact.directClaimIds])],
     impactedClaimIds:impact.impactedClaimIds,
     impactedTopicIds:impact.impactedTopicIds,
+    repositoryStatus,
     snapshot:after
-  });
+  };
+  if(persist){
+    fs.mkdirSync(path.dirname(statePath),{recursive:true});
+    fs.writeFileSync(statePath,JSON.stringify(result,null,2));
+  }
+  return Object.freeze(result);
 }

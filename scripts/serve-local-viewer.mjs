@@ -24,7 +24,7 @@ const settingsPath=path.join(root,".research-index","viewer-settings.json");
 function defaultSettings(){return{promptEnabled:false,agentActivityEnabled:true,replayEnabled:true,changeAnimationsEnabled:true}}
 function loadSettings(){return fs.existsSync(settingsPath)?{...defaultSettings(),...JSON.parse(fs.readFileSync(settingsPath,"utf8"))}:defaultSettings()}
 function saveSettings(value){fs.mkdirSync(path.dirname(settingsPath),{recursive:true});const next={...defaultSettings(),...value};fs.writeFileSync(settingsPath,JSON.stringify(next,null,2));return next}
-function originAllowed(origin){if(!origin)return true;try{const u=new URL(origin);return["127.0.0.1","localhost","::1"].includes(u.hostname)}catch{return false}}
+function originAllowed(origin){if(!origin)return true;try{const u=new URL(origin);return["127.0.0.1","localhost","::1"].includes(u.hostname)||(u.protocol==="https:"&&u.hostname==="yunitrish006006.github.io")}catch{return false}}
 function cors(req,res){const origin=req.headers.origin;if(origin&&originAllowed(origin)){res.setHeader("Access-Control-Allow-Origin",origin);res.setHeader("Vary","Origin")}res.setHeader("Access-Control-Allow-Headers","Content-Type");res.setHeader("Access-Control-Allow-Methods","GET,POST,OPTIONS")}
 function json(req,res,status,value){cors(req,res);res.statusCode=status;res.setHeader("Content-Type","application/json; charset=utf-8");res.end(JSON.stringify(value))}
 function body(req){return new Promise((resolve,reject)=>{let total=0,chunks=[];req.on("data",(chunk)=>{total+=chunk.length;if(total>MAX_BODY){reject(new Error("request body too large"));req.destroy();return}chunks.push(chunk)});req.on("end",()=>{try{resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")||"{}"))}catch(error){reject(error)}});req.on("error",reject)})}
@@ -43,7 +43,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==="/api/activity"&&req.method==="GET")return json(req,res,200,{events:activityEvents({after:Number(url.searchParams.get("after")||0),limit:Number(url.searchParams.get("limit")||200)})});
     if(url.pathname==="/api/activity"&&req.method==="POST")return json(req,res,200,emitActivity(await body(req)));
     if(url.pathname==="/api/orchestration-plan"&&req.method==="POST"){const data=await body(req);const plan=buildOrchestrationPlan({query:String(data.query||""),topicId:data.topicId??null,claimId:data.claimId??null,changedTopics:data.changedTopics??[],changedFiles:data.changedFiles??[]});emitActivity({type:"orchestration_planned",summary:`${plan.mode} score ${plan.score}`,plan});return json(req,res,200,plan)}
-    if(url.pathname==="/api/change-intelligence"&&req.method==="GET")return json(req,res,200,researchChangeIntelligence());
+    if(url.pathname==="/api/change-intelligence"&&req.method==="GET")return json(req,res,200,researchChangeIntelligence({persist:true}));
     if(url.pathname==="/api/verification-state"&&req.method==="GET")return json(req,res,200,loadVerificationState());
     if(url.pathname==="/api/replay"&&req.method==="GET")return json(req,res,200,replayTimeline());
     if(url.pathname==="/api/replay/frame"&&req.method==="GET")return json(req,res,200,replayFrame(Number(url.searchParams.get("sequence")||0)));
@@ -55,7 +55,7 @@ const server=http.createServer(async(req,res)=>{
       return json(req,res,200,{event,orchestration:plan,adapter,execution:adapter.enabled?"agent-adapter-ready":"agent-adapter-unavailable"});
     }
     if(url.pathname==="/api/refresh"&&req.method==="POST"){
-      const index=buildSourceIndex(),graph=renderGraphV2(),change=researchChangeIntelligence();
+      const index=buildSourceIndex(),graph=renderGraphV2(),change=researchChangeIntelligence({persist:true});
       emitActivity({type:"research_change",summary:"workspace refreshed",change});
       return json(req,res,200,{index:{files:index.files,chunks:index.chunks.length,rootPresent:index.rootPresent},graph,change});
     }

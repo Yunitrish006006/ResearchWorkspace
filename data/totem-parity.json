@@ -80,12 +80,12 @@
       "research": "Research Change Intelligence",
       "status": "partial",
       "evidence": [
-        "intelligence/change-intelligence.mjs"
+        "intelligence/change-intelligence.mjs",
+        "site/local-live.js"
       ],
       "missing": [
-        "Git worktree diff mapping",
-        "viewer change overlay",
-        "durable change snapshot"
+        "semantic file-to-entity mapping beyond registered provenance",
+        "full Flutter overlay parity"
       ]
     },
     {
@@ -108,12 +108,12 @@
       "research": "Research Replay",
       "status": "partial",
       "evidence": [
-        "intelligence/research-replay.mjs"
+        "intelligence/research-replay.mjs",
+        "site/local-live.js"
       ],
       "missing": [
         "Flutter timeline scrubber",
-        "legacy timeline scrubber",
-        "checkpoint graph historical masking"
+        "checkpoint graph historical masking with generated checkpoint entity sets"
       ]
     },
     {
@@ -136,11 +136,11 @@
       "research": "Research Agent Activity",
       "status": "partial",
       "evidence": [
-        "intelligence/activity-stream.mjs"
+        "intelligence/activity-stream.mjs",
+        "site/local-live.js"
       ],
       "missing": [
-        "Flutter activity overlay",
-        "legacy activity overlay"
+        "Flutter activity overlay"
       ]
     },
     {
@@ -149,11 +149,11 @@
       "research": "Research Local Bridge",
       "status": "partial",
       "evidence": [
-        "scripts/serve-local-viewer.mjs"
+        "scripts/serve-local-viewer.mjs",
+        "site/local-live.js"
       ],
       "missing": [
         "Flutter live client",
-        "repository status endpoint",
         "conversation sync"
       ]
     },

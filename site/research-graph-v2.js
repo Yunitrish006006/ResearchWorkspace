@@ -33,6 +33,28 @@ var lastHits=[];
 var pointers=new Map();
 var cam={yaw:-0.48,pitch:0.22,zoom:1.02,panX:0,panY:0};
 var gesture={pinching:false,startDistance:0,startZoom:1,lastCentroid:null,suppressClick:false};
+var liveOverlay={
+  changedEntityIds:new Set(),
+  impactedTopicIds:new Set(),
+  runningVerification:new Set(),
+  passedVerification:new Set(),
+  failedVerification:new Set(),
+  activityNodeId:null,
+  historicalEntityIds:new Set()
+};
+function setLiveState(state){
+  state=state||{};
+  var change=state.change||{};
+  var verification=state.verification||{};
+  liveOverlay.changedEntityIds=new Set(change.changedEntityIds||[]);
+  liveOverlay.impactedTopicIds=new Set(change.impactedTopicIds||[]);
+  liveOverlay.runningVerification=new Set(verification.runningTargetIds||[]);
+  liveOverlay.passedVerification=new Set(verification.passedTargetIds||[]);
+  liveOverlay.failedVerification=new Set(verification.failedTargetIds||[]);
+  liveOverlay.activityNodeId=state.activityNodeId||null;
+  liveOverlay.historicalEntityIds=new Set(state.historicalEntityIds||[]);
+  draw();
+}
 
 document.getElementById("snapshot").textContent=(DATA.snapshot.date||"unknown")+" research snapshot";
 document.getElementById("stats").textContent=topics.length+" topics｜"+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+reviews.length+" reviews";
@@ -195,6 +217,7 @@ function draw(){
   var byId=new Map(current.nodes.map(function(n){return[n.id,n]})),related=relatedOwners(current),spotlightOwner=owner(byId.get(spotlightId));
 
   current.clusters.forEach(function(cluster){
+    if(liveOverlay.historicalEntityIds.size&&!liveOverlay.historicalEntityIds.has(cluster.ownerId))return;
     var p=projected.get(cluster.ownerId);if(!p)return;
     var state=!spotlightId?"normal":cluster.ownerId===spotlightOwner?"active":related.has(cluster.ownerId)?"related":"dim";
     drawCluster(ctx,cluster,p,state)
@@ -202,9 +225,15 @@ function draw(){
 
   var labels=[];
   current.edges.forEach(function(edge){
+    if(liveOverlay.historicalEntityIds.size&&(!liveOverlay.historicalEntityIds.has(edge.from)||!liveOverlay.historicalEntityIds.has(edge.to)))return;
     var a=projected.get(edge.from),b=projected.get(edge.to);if(!a||!b)return;
     var active=!spotlightId||edge.from===spotlightId||edge.to===spotlightId;
-    var color=edgeColor(edge.type),alpha=active?.78:.10,widthLine=active?1.7:.8;
+    var changed=liveOverlay.changedEntityIds.has(edge.from)||liveOverlay.changedEntityIds.has(edge.to)||liveOverlay.changedEntityIds.has(edge.id);
+    var verificationStatus=liveOverlay.failedVerification.has(edge.from)||liveOverlay.failedVerification.has(edge.to)?"failed":
+      liveOverlay.runningVerification.has(edge.from)||liveOverlay.runningVerification.has(edge.to)?"running":
+      liveOverlay.passedVerification.has(edge.from)||liveOverlay.passedVerification.has(edge.to)?"passed":null;
+    var color=changed?"#fbbf24":verificationStatus&&edge.type==="validated-by"?(verificationStatus==="failed"?"#f87171":verificationStatus==="running"?"#67e8f9":"#86efac"):edgeColor(edge.type);
+    var alpha=changed?.96:(active?.78:.10),widthLine=changed?2.8:(verificationStatus&&edge.type==="validated-by"?2.6:(active?1.7:.8));
     ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=widthLine;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.globalAlpha=1;
     drawArrowhead(ctx,a,b,color,alpha,widthLine);
     if(active&&spotlightId&&edge.label)labels.push({text:short(edge.label,34),x:(a.x+b.x)/2,y:(a.y+b.y)/2})
@@ -212,11 +241,20 @@ function draw(){
 
   lastHits=[];
   current.nodes.slice().sort(function(a,b){return projected.get(a.id).z-projected.get(b.id).z}).forEach(function(node){
+    if(liveOverlay.historicalEntityIds.size&&!liveOverlay.historicalEntityIds.has(node.id))return;
     var p=projected.get(node.id),selected=spotlightId===node.id||keyboardFocusId===node.id,connected=connectedToSpotlight(current,node.id);
     var child=node.type==="claim"||node.type==="study"||node.type==="evidence"||node.type==="review";
     var base=node.type==="root"?18:node.type==="topic"?13:node.type==="claim"?8:5.8;
     var radius=Math.max(child?4.4:8,base*p.scale),color=nodeColor(node);
     ctx.save();ctx.globalAlpha=spotlightId&&!connected?.15:1;
+    var nodeChanged=liveOverlay.changedEntityIds.has(node.id);
+    var impacted=node.type==="topic"&&liveOverlay.impactedTopicIds.has(node.id);
+    var verificationStatus=liveOverlay.failedVerification.has(node.id)?"failed":liveOverlay.runningVerification.has(node.id)?"running":liveOverlay.passedVerification.has(node.id)?"passed":null;
+    var agentActive=liveOverlay.activityNodeId===node.id;
+    if(impacted){ctx.strokeStyle="#a78bfa";ctx.lineWidth=2.2;ctx.beginPath();ctx.arc(p.x,p.y,radius+14,0,Math.PI*2);ctx.stroke()}
+    if(nodeChanged){ctx.strokeStyle="#fbbf24";ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(p.x,p.y,radius+11,0,Math.PI*2);ctx.stroke()}
+    if(verificationStatus){ctx.strokeStyle=verificationStatus==="failed"?"#f87171":verificationStatus==="running"?"#67e8f9":"#86efac";ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,radius+8,0,Math.PI*2);ctx.stroke()}
+    if(agentActive){ctx.strokeStyle="#67e8f9";ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(p.x,p.y,radius+17,0,Math.PI*2);ctx.stroke()}
     if(selected||((node.type==="topic"||node.type==="claim")&&expanded.has(node.id))){
       ctx.strokeStyle=selected?"#fff":color;ctx.lineWidth=selected?2.8:2;ctx.beginPath();ctx.arc(p.x,p.y,radius+8,0,Math.PI*2);ctx.stroke()
     }
@@ -372,5 +410,5 @@ document.getElementById("relations").addEventListener("click",function(){
 window.addEventListener("resize",function(){resize();draw()});
 resize();keyboardFocusId=root.id;syncEdgeUi();draw();
 
-window.__RESEARCH_GRAPH_3D__={scene:scene,reset:resetView,camera:cam,expanded:expanded};
+window.__RESEARCH_GRAPH_3D__={scene:scene,reset:resetView,camera:cam,expanded:expanded,setLiveState:setLiveState};
 }());
