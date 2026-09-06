@@ -16,30 +16,46 @@ jobs:
     steps:
       - name: Check out ResearchWorkspace
         uses: actions/checkout@v6
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: "22"
       - name: Validate ResearchWorkspace
         run: node scripts/validate-all.mjs
       - name: Clone canonical thesis repository
         run: git clone --depth=1 --single-branch --branch main https://github.com/Yunitrish006006/Three-Factor-Digital-Twin.git ../Three-Factor-Digital-Twin
-      - name: Build latest thesis source index and graph data
+      - name: Build latest source index and shared graph assets
         env:
           RESEARCH_THESIS_REPO: ${{ github.workspace }}/../Three-Factor-Digital-Twin
         run: |
           node scripts/research-intelligence.mjs build-index
-          node scripts/research-intelligence.mjs render-graph
+          node scripts/render-graph-v2.mjs
+          node scripts/render-flutter-graph.mjs
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+          cache: true
+      - name: Build Flutter production root
+        working-directory: viewer_flutter
+        run: |
+          flutter pub get
+          flutter build web --wasm --base-href /ResearchWorkspace/
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Prepare static site
         run: |
           rm -rf _site
-          mkdir -p _site
-          cp -R site/. _site/
+          mkdir -p _site/legacy/generated
+          cp -R viewer_flutter/build/web/. _site/
+          cp site/index.html _site/legacy/index.html
+          cp site/graph-v2.css _site/legacy/graph-v2.css
+          cp site/research-graph-v2.js _site/legacy/research-graph-v2.js
+          cp site/generated/graph-data.js _site/legacy/generated/graph-data.js
+          cp site/overview.html _site/overview.html
+          cp site/app.js _site/app.js
+          cp site/styles.css _site/styles.css
           touch _site/.nojekyll
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: _site
   deploy:
@@ -53,6 +69,5 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4

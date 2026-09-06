@@ -1,0 +1,36 @@
+name: Validate Flutter Viewer
+on:
+  push:
+    paths:
+      - "viewer_flutter/**"
+      - "intelligence/graph-view-model.mjs"
+      - "scripts/render-flutter-graph.mjs"
+      - "data/research-graph.json"
+      - ".github/workflows/flutter-viewer.yml"
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Generate shared graph asset
+        run: node scripts/render-flutter-graph.mjs
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.0"
+          channel: stable
+          cache: true
+      - working-directory: viewer_flutter
+        run: flutter pub get
+      - working-directory: viewer_flutter
+        run: flutter analyze
+      - working-directory: viewer_flutter
+        run: flutter test
+      - working-directory: viewer_flutter
+        run: flutter build web --wasm --base-href /ResearchWorkspace/
