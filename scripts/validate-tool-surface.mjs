@@ -49,8 +49,10 @@ for(const route of ["/api/conversation","/api/conversation/prompt","/api/convers
 const adapter=source("intelligence/agent-adapter.mjs");
 assert.ok(adapter.includes('["exec","--json","--skip-git-repo-check","--sandbox",config.sandbox,"--cd",config.cwd]'));
 assert.ok(adapter.includes('child.stdin?.end?.(promptEnvelope'));
-assert.ok(!adapter.includes("--full-auto"));
-assert.ok(!adapter.includes("--dangerously-bypass-approvals-and-sandbox"));
+assert.ok(!/args\.push\(\s*["']--full-auto["']/.test(adapter),"adapter must not append --full-auto");
+assert.ok(!/args\.push\(\s*["']--dangerously-bypass-approvals-and-sandbox["']/.test(adapter),"adapter must not append dangerous sandbox bypass");
+assert.ok(!/const args\s*=\s*\[[^\]]*--full-auto/s.test(adapter),"adapter argv must not contain --full-auto");
+assert.ok(!/const args\s*=\s*\[[^\]]*--dangerously-bypass-approvals-and-sandbox/s.test(adapter),"adapter argv must not contain dangerous sandbox bypass");
 
 const refArg=process.argv.indexOf("--reference-root");
 if(refArg>=0){

@@ -152,6 +152,7 @@ export function createAgentAdapter({
     config=adapterConfiguration(env,{workspaceRoot,thesisRoot});
     state.configuredKind=config.configuredKind;
   }catch(error){
+    state.configuredKind="invalid";
     state.reason=sanitizeMessage(error instanceof Error?error.message:String(error),[workspaceRoot,thesisRoot]);
     config={configuredKind:"invalid",codexBin:"codex",cwd:workspaceRoot,sandbox:"workspace-write",model:null,workspaceRoot,thesisRoot};
   }
