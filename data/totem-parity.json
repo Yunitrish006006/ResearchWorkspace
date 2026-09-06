@@ -1,0 +1,228 @@
+{
+  "schemaVersion": 1,
+  "reference": {
+    "repository": "Yunitrish006006/TotemWorkspace",
+    "commit": "74822eb2de6a6bdf31c595b4f148a536a023b105"
+  },
+  "rule": "Every production TotemWorkspace subsystem needs a ResearchWorkspace analogue unless explicitly classified domain-specific replacement.",
+  "capabilities": [
+    {
+      "id": "knowledge-graph",
+      "totem": "Workspace Intelligence",
+      "research": "Research Knowledge Graph",
+      "status": "implemented",
+      "evidence": [
+        "intelligence/research-knowledge.mjs",
+        "data/research-graph.json"
+      ]
+    },
+    {
+      "id": "source-index",
+      "totem": "Code Index / Inventory",
+      "research": "Source / Document Index",
+      "status": "implemented",
+      "evidence": [
+        "intelligence/source-index.mjs"
+      ]
+    },
+    {
+      "id": "adaptive-orchestration",
+      "totem": "Adaptive Orchestration",
+      "research": "Adaptive Research Orchestration",
+      "status": "implemented",
+      "evidence": [
+        "intelligence/orchestration-plan.mjs",
+        "scripts/validate-orchestration.mjs"
+      ]
+    },
+    {
+      "id": "context-pack",
+      "totem": "Audience Context Pack",
+      "research": "Research Role Context Pack",
+      "status": "implemented",
+      "evidence": [
+        "intelligence/context-pack.mjs"
+      ]
+    },
+    {
+      "id": "legacy-3d",
+      "totem": "Legacy JS 3D Viewer",
+      "research": "Legacy JS 3D Research Viewer",
+      "status": "implemented",
+      "evidence": [
+        "site/index.html",
+        "site/research-graph-v2.js"
+      ]
+    },
+    {
+      "id": "flutter-root",
+      "totem": "Flutter production root",
+      "research": "Flutter production 3D viewer",
+      "status": "implemented",
+      "evidence": [
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        ".github/workflows/flutter-viewer.yml"
+      ]
+    },
+    {
+      "id": "semantic-lod",
+      "totem": "Progressive Semantic LOD",
+      "research": "Thesis > Topic > Claim > Study/Evidence/Review",
+      "status": "implemented",
+      "evidence": [
+        "viewer_flutter/lib/model/graph_scene.dart",
+        "site/research-graph-v2.js"
+      ]
+    },
+    {
+      "id": "change-intelligence",
+      "totem": "Change Intelligence",
+      "research": "Research Change Intelligence",
+      "status": "partial",
+      "evidence": [
+        "intelligence/change-intelligence.mjs"
+      ],
+      "missing": [
+        "Git worktree diff mapping",
+        "viewer change overlay",
+        "durable change snapshot"
+      ]
+    },
+    {
+      "id": "verification-graph",
+      "totem": "Verification Graph",
+      "research": "Claim Verification Graph",
+      "status": "partial",
+      "evidence": [
+        "intelligence/verification-graph.mjs",
+        "intelligence/verification-state.mjs"
+      ],
+      "missing": [
+        "live viewer overlay parity",
+        "verification plan execution telemetry"
+      ]
+    },
+    {
+      "id": "replay",
+      "totem": "Development Replay",
+      "research": "Research Replay",
+      "status": "partial",
+      "evidence": [
+        "intelligence/research-replay.mjs"
+      ],
+      "missing": [
+        "Flutter timeline scrubber",
+        "legacy timeline scrubber",
+        "checkpoint graph historical masking"
+      ]
+    },
+    {
+      "id": "agent-adapter",
+      "totem": "Codex Agent Adapter",
+      "research": "Codex Research Agent Adapter",
+      "status": "partial",
+      "evidence": [
+        "intelligence/agent-adapter.mjs"
+      ],
+      "missing": [
+        "Bridge task execution",
+        "JSONL activity mapping",
+        "post-task refresh"
+      ]
+    },
+    {
+      "id": "agent-activity",
+      "totem": "Agent Activity",
+      "research": "Research Agent Activity",
+      "status": "partial",
+      "evidence": [
+        "intelligence/activity-stream.mjs"
+      ],
+      "missing": [
+        "Flutter activity overlay",
+        "legacy activity overlay"
+      ]
+    },
+    {
+      "id": "local-bridge",
+      "totem": "Local Bridge",
+      "research": "Research Local Bridge",
+      "status": "partial",
+      "evidence": [
+        "scripts/serve-local-viewer.mjs"
+      ],
+      "missing": [
+        "Flutter live client",
+        "repository status endpoint",
+        "conversation sync"
+      ]
+    },
+    {
+      "id": "mcp",
+      "totem": "MCP server",
+      "research": "Research MCP server",
+      "status": "implemented",
+      "evidence": [
+        "mcp/server.mjs"
+      ]
+    },
+    {
+      "id": "github-pages",
+      "totem": "Flutter Pages + legacy rollback",
+      "research": "Flutter Pages + legacy research viewer",
+      "status": "implemented",
+      "evidence": [
+        ".github/workflows/pages.yml"
+      ]
+    },
+    {
+      "id": "repository-sync",
+      "totem": "Sibling repository refresh",
+      "research": "Canonical thesis repository refresh",
+      "status": "partial",
+      "evidence": [
+        ".github/workflows/pages.yml",
+        "data/repositories.json"
+      ],
+      "missing": [
+        "local repository status/drift",
+        "incremental thesis index refresh"
+      ]
+    },
+    {
+      "id": "remote-bridge",
+      "totem": "Remote SSH/tmux bridge tooling",
+      "research": "Remote research bridge tooling",
+      "status": "missing",
+      "evidence": []
+    },
+    {
+      "id": "conversation-sync",
+      "totem": "Viewer/Discord conversation sync",
+      "research": "Research conversation sync",
+      "status": "missing",
+      "evidence": []
+    },
+    {
+      "id": "codex-discord",
+      "totem": "CodexDiscord",
+      "research": "Research CodexDiscord surface",
+      "status": "missing",
+      "evidence": []
+    },
+    {
+      "id": "validator-parity",
+      "totem": "Regression validators",
+      "research": "Research regression/parity validators",
+      "status": "partial",
+      "evidence": [
+        "scripts/validate-all.mjs"
+      ],
+      "missing": [
+        "Flutter/legacy overlay parity",
+        "remote bridge",
+        "conversation sync"
+      ]
+    }
+  ]
+}
