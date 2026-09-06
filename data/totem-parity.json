@@ -217,8 +217,14 @@
       "id": "codex-discord",
       "totem": "CodexDiscord",
       "research": "Research CodexDiscord surface",
-      "status": "missing",
-      "evidence": []
+      "status": "implemented",
+      "evidence": [
+        "tools/codex-discord/src/index.mjs",
+        "tools/codex-discord/src/bot.mjs",
+        "tools/codex-discord/src/workspace-sync.mjs",
+        "tools/codex-discord/src/codex-runner.mjs",
+        ".github/workflows/codex-discord.yml"
+      ]
     },
     {
       "id": "validator-parity",
@@ -226,11 +232,11 @@
       "research": "Research regression/parity validators",
       "status": "partial",
       "evidence": [
-        "scripts/validate-all.mjs"
+        "scripts/validate-all.mjs",
+        ".github/workflows/codex-discord.yml"
       ],
       "missing": [
-        "Flutter/legacy overlay parity",
-        "conversation sync"
+        "Flutter/legacy overlay parity"
       ]
     }
   ]

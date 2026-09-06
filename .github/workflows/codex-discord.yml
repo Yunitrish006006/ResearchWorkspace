@@ -1,0 +1,27 @@
+name: Validate Research CodexDiscord
+on:
+  push:
+    paths:
+      - "tools/codex-discord/**"
+      - ".github/workflows/codex-discord.yml"
+  pull_request:
+    paths:
+      - "tools/codex-discord/**"
+      - ".github/workflows/codex-discord.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/codex-discord/package-lock.json
+      - working-directory: tools/codex-discord
+        run: npm ci
+      - working-directory: tools/codex-discord
+        run: npm test
