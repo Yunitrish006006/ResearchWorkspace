@@ -1,5 +1,11 @@
 name: Validate Source-first Inventory
 on:
+  push:
+    paths:
+      - "intelligence/**"
+      - "data/research-graph.json"
+      - "scripts/report-source-inventory.mjs"
+      - ".github/workflows/source-inventory.yml"
   pull_request:
     paths:
       - "intelligence/**"

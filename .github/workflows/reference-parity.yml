@@ -1,0 +1,22 @@
+name: Check Totem Reference Drift
+on:
+  push:
+    paths:
+      - "data/totem-parity.json"
+      - "scripts/check-totem-reference.mjs"
+      - ".github/workflows/reference-parity.yml"
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  reference:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Confirm audited TotemWorkspace baseline is current
+        run: node scripts/check-totem-reference.mjs
