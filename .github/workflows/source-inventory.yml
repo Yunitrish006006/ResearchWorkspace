@@ -1,0 +1,37 @@
+name: Validate Source-first Inventory
+on:
+  pull_request:
+    paths:
+      - "intelligence/**"
+      - "data/research-graph.json"
+      - "scripts/report-source-inventory.mjs"
+      - ".github/workflows/source-inventory.yml"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source-inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Clone canonical thesis repository
+        run: git clone --depth=100 --single-branch --branch main https://github.com/Yunitrish006006/Three-Factor-Digital-Twin.git ../Three-Factor-Digital-Twin
+      - name: Build source index
+        env:
+          RESEARCH_THESIS_REPO: ${{ github.workspace }}/../Three-Factor-Digital-Twin
+        run: node scripts/research-intelligence.mjs build-index
+      - name: Build source/document inventory report
+        env:
+          RESEARCH_THESIS_REPO: ${{ github.workspace }}/../Three-Factor-Digital-Twin
+        run: node scripts/report-source-inventory.mjs --strict
+      - name: Upload source inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-source-inventory
+          path: |
+            .research-index/source-inventory.json
+            .research-index/source-inventory.md

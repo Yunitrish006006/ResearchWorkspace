@@ -239,6 +239,26 @@
         ".github/workflows/codex-discord.yml",
         "scripts/validate-viewer-parity.mjs"
       ]
+    },
+    {
+      "id": "agent-skill",
+      "totem": "TotemWorkspace Codex skill",
+      "research": "ResearchWorkspace intelligence skill",
+      "status": "implemented",
+      "evidence": [
+        ".agents/skills/research-workspace-intelligence/SKILL.md",
+        ".agents/skills/research-workspace-intelligence/agents/openai.yaml"
+      ]
+    },
+    {
+      "id": "source-inventory-workflow",
+      "totem": "Code-first Inventory workflow",
+      "research": "Source-first Inventory workflow",
+      "status": "implemented",
+      "evidence": [
+        "scripts/report-source-inventory.mjs",
+        ".github/workflows/source-inventory.yml"
+      ]
     }
   ]
 }

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Research Workspace Intelligence"
+  short_description: "Graph-first thesis RAG, evidence verification, impact and artifact drift analysis"
+  default_prompt: "Use ResearchWorkspace intelligence to narrow this thesis task before broad reading or editing."
+policy:
+  allow_implicit_invocation: true
