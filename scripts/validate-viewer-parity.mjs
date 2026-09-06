@@ -26,8 +26,12 @@ for(const relation of ["contains","supports","uses-method","grounded-in","valida
   assert.ok(flutter.includes("'"+relation+"'"),"Flutter relation missing "+relation);
   assert.ok(legacyGraph.includes('"'+relation+'"')||html.includes('data-edge-filter="'+relation+'"'),"Legacy relation missing "+relation);
 }
-for(const lod of ["topic","claim","study","evidence","review"]){
+for(const lod of ["topic","claim","study","evidence","review","source-area","artifact"]){
   assert.ok(flutter.includes("'"+lod+"'"),"Flutter LOD missing "+lod);
   assert.ok(legacyGraph.includes('"'+lod+'"'),"Legacy LOD missing "+lod);
 }
-console.log("Flutter and legacy live/overlay/semantic parity OK");
+assert.ok(flutter.includes("sourceAreas"));
+assert.ok(flutter.includes("artifacts"));
+assert.ok(legacyGraph.includes("sourceAreas"));
+assert.ok(legacyGraph.includes("artifacts"));
+console.log("Flutter and legacy live/overlay/semantic/L4 source parity OK");

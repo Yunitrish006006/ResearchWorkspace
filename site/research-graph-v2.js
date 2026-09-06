@@ -16,6 +16,8 @@ var claims=DATA.claims||[];
 var studies=DATA.studies||[];
 var evidence=DATA.evidence||[];
 var reviews=DATA.reviews||[];
+var sourceAreas=DATA.sourceAreas||[];
+var artifacts=DATA.artifacts||[];
 var relations=DATA.relations||[];
 
 var topicMap=new Map(topics.map(function(x){return[x.id,x]}));
@@ -23,6 +25,8 @@ var claimMap=new Map(claims.map(function(x){return[x.id,x]}));
 var studyMap=new Map(studies.map(function(x){return[x.id,x]}));
 var evidenceMap=new Map(evidence.map(function(x){return[x.id,x]}));
 var reviewMap=new Map(reviews.map(function(x){return[x.id,x]}));
+var sourceAreaMap=new Map(sourceAreas.map(function(x){return[x.id,x]}));
+var artifactMap=new Map(artifacts.map(function(x){return[x.id,x]}));
 
 var edgeFilterKeys=["contains","supports","uses-method","grounded-in","validated-by","limits"];
 var enabledEdgeFilters=new Set(edgeFilterKeys);
@@ -57,7 +61,7 @@ function setLiveState(state){
 }
 
 document.getElementById("snapshot").textContent=(DATA.snapshot.date||"unknown")+" research snapshot";
-document.getElementById("stats").textContent=topics.length+" topics｜"+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+reviews.length+" reviews";
+document.getElementById("stats").textContent=topics.length+" topics｜"+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+sourceAreas.length+" source areas｜"+artifacts.length+" artifacts｜"+reviews.length+" reviews";
 var passCount=reviews.filter(function(x){return x.status==="PASS"}).length;
 var failCount=reviews.filter(function(x){return x.status==="FAIL"}).length;
 var warnCount=reviews.filter(function(x){return x.status==="WARN"}).length;
@@ -97,8 +101,12 @@ function topicRadius(){var count=topics.filter(function(t){return expanded.has(t
 function clusterRadius(ownerId){
   if(topicMap.has(ownerId)){var c=claims.filter(function(x){return x.ownerId===ownerId}).length;return Math.min(230,105+Math.sqrt(Math.max(1,c))*30)}
   if(claimMap.has(ownerId)){
-    var n=studies.filter(function(x){return x.claimId===ownerId}).length+evidence.filter(function(x){return x.claimId===ownerId}).length+reviews.filter(function(x){return x.claimId===ownerId}).length;
+    var n=studies.filter(function(x){return x.claimId===ownerId}).length+evidence.filter(function(x){return x.claimId===ownerId}).length+reviews.filter(function(x){return x.claimId===ownerId}).length+sourceAreas.filter(function(x){return x.claimId===ownerId}).length;
     return Math.min(170,76+Math.sqrt(Math.max(1,n))*23)
+  }
+  if(sourceAreaMap.has(ownerId)){
+    var a=artifacts.filter(function(x){return x.areaId===ownerId}).length;
+    return Math.min(135,62+Math.sqrt(Math.max(1,a))*20)
   }
   return 100
 }
@@ -129,7 +137,7 @@ function scene(){
     if(!expanded.has(claim.id))return;
     var parent=nodes.find(function(n){return n.id===claim.id});
     if(!parent)return;
-    var childCount=studies.filter(function(x){return x.claimId===claim.id}).length+evidence.filter(function(x){return x.claimId===claim.id}).length+reviews.filter(function(x){return x.claimId===claim.id}).length;
+    var childCount=studies.filter(function(x){return x.claimId===claim.id}).length+evidence.filter(function(x){return x.claimId===claim.id}).length+reviews.filter(function(x){return x.claimId===claim.id}).length+sourceAreas.filter(function(x){return x.claimId===claim.id}).length;
     clusters.push({ownerId:claim.id,radius:clusterRadius(claim.id),childCount:childCount});
     studies.filter(function(x){return x.claimId===claim.id}).forEach(function(item){
       var p=scatter(parent.position,item.id,"study",clusterRadius(claim.id));
@@ -145,6 +153,23 @@ function scene(){
       var p=scatter(parent.position,item.id,"review",clusterRadius(claim.id));
       nodes.push({id:item.id,type:"review",label:item.title,position:p,source:item,ownerId:claim.id,rank:3});
       edges.push({id:"review:"+item.id,from:claim.id,to:item.id,type:"validated-by",label:item.status});
+    });
+    sourceAreas.filter(function(x){return x.claimId===claim.id}).forEach(function(item){
+      var p=scatter(parent.position,item.id,"source-area",clusterRadius(claim.id));
+      nodes.push({id:item.id,type:"source-area",label:item.title,position:p,source:item,ownerId:claim.id,rank:3});
+      edges.push({id:"source-area:"+item.id,from:claim.id,to:item.id,type:"contains",label:"source area"});
+    });
+  });
+
+  sourceAreas.forEach(function(area){
+    if(!expanded.has(area.id))return;
+    var parent=nodes.find(function(n){return n.id===area.id});if(!parent)return;
+    var owned=artifacts.filter(function(x){return x.areaId===area.id});
+    clusters.push({ownerId:area.id,radius:clusterRadius(area.id),childCount:owned.length});
+    owned.forEach(function(item){
+      var p=scatter(parent.position,item.id,"artifact",clusterRadius(area.id));
+      nodes.push({id:item.id,type:"artifact",label:item.title,position:p,source:item,ownerId:area.id,rank:4});
+      edges.push({id:"artifact:"+item.id,from:area.id,to:item.id,type:"contains",label:"indexed source"});
     });
   });
 
@@ -163,6 +188,8 @@ function nodeColor(node){
     return"#fbbf24"
   }
   if(node.type==="study")return"#a78bfa";
+  if(node.type==="source-area")return"#f472b6";
+  if(node.type==="artifact")return"#a7f3d0";
   if(node.type==="evidence")return"#34d399";
   if(node.type==="review"){
     if(node.source.status==="FAIL")return"#fb7185";
@@ -243,7 +270,7 @@ function draw(){
   current.nodes.slice().sort(function(a,b){return projected.get(a.id).z-projected.get(b.id).z}).forEach(function(node){
     if(liveOverlay.historicalEntityIds.size&&!liveOverlay.historicalEntityIds.has(node.id))return;
     var p=projected.get(node.id),selected=spotlightId===node.id||keyboardFocusId===node.id,connected=connectedToSpotlight(current,node.id);
-    var child=node.type==="claim"||node.type==="study"||node.type==="evidence"||node.type==="review";
+    var child=node.type==="claim"||node.type==="study"||node.type==="evidence"||node.type==="review"||node.type==="source-area"||node.type==="artifact";
     var base=node.type==="root"?18:node.type==="topic"?13:node.type==="claim"?8:5.8;
     var radius=Math.max(child?4.4:8,base*p.scale),color=nodeColor(node);
     ctx.save();ctx.globalAlpha=spotlightId&&!connected?.15:1;
@@ -255,7 +282,7 @@ function draw(){
     if(nodeChanged){ctx.strokeStyle="#fbbf24";ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(p.x,p.y,radius+11,0,Math.PI*2);ctx.stroke()}
     if(verificationStatus){ctx.strokeStyle=verificationStatus==="failed"?"#f87171":verificationStatus==="running"?"#67e8f9":"#86efac";ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(p.x,p.y,radius+8,0,Math.PI*2);ctx.stroke()}
     if(agentActive){ctx.strokeStyle="#67e8f9";ctx.lineWidth=2.4;ctx.beginPath();ctx.arc(p.x,p.y,radius+17,0,Math.PI*2);ctx.stroke()}
-    if(selected||((node.type==="topic"||node.type==="claim")&&expanded.has(node.id))){
+    if(selected||((node.type==="topic"||node.type==="claim"||node.type==="source-area")&&expanded.has(node.id))){
       ctx.strokeStyle=selected?"#fff":color;ctx.lineWidth=selected?2.8:2;ctx.beginPath();ctx.arc(p.x,p.y,radius+8,0,Math.PI*2);ctx.stroke()
     }
     ctx.shadowColor=color;ctx.shadowBlur=selected?18:8;ctx.fillStyle=color;ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
@@ -272,7 +299,7 @@ function hit(clientX,clientY){
   hits.sort(function(a,b){return b.z-a.z});return hits[0]||null
 }
 function typeLabel(node){
-  return node.type==="root"?"THESIS":node.type==="topic"?"TOPIC":node.type==="claim"?"CLAIM":node.type==="study"?"STUDY / METHOD":node.type==="evidence"?"EVIDENCE":"VERIFICATION"
+  return node.type==="root"?"THESIS":node.type==="topic"?"TOPIC":node.type==="claim"?"CLAIM":node.type==="study"?"STUDY / METHOD":node.type==="evidence"?"EVIDENCE":node.type==="source-area"?"SOURCE AREA":node.type==="artifact"?"SOURCE ARTIFACT":"VERIFICATION"
 }
 function itemClass(status){return status==="PASS"||status==="SUPPORTED"?"ok":status==="FAIL"||status==="NOT_SUPPORTED"?"fail":"warn"}
 function setInfo(node,sections){
@@ -296,9 +323,14 @@ function showNode(node){
   if(node.type==="topic"){
     if(expanded.has(node.id)){
       expanded.delete(node.id);
-      claims.filter(function(c){return c.ownerId===node.id}).forEach(function(c){expanded.delete(c.id)})
+      claims.filter(function(c){return c.ownerId===node.id}).forEach(function(c){
+        expanded.delete(c.id);sourceAreas.filter(function(a){return a.claimId===c.id}).forEach(function(a){expanded.delete(a.id)})
+      })
     }else expanded.add(node.id)
   }else if(node.type==="claim"){
+    if(expanded.has(node.id)){expanded.delete(node.id);sourceAreas.filter(function(a){return a.claimId===node.id}).forEach(function(a){expanded.delete(a.id)})}
+    else expanded.add(node.id)
+  }else if(node.type==="source-area"){
     if(expanded.has(node.id))expanded.delete(node.id);else expanded.add(node.id)
   }
   spotlightId=node.id;
@@ -317,12 +349,15 @@ function showNode(node){
     sections=[
       {title:"Claim status",items:[{text:src.status||"UNKNOWN",className:itemClass(src.status)}]},
       {title:"Evidence / studies",items:studies.filter(function(x){return x.claimId===node.id}).map(function(x){return{text:x.kind+" · "+x.title}}).concat(evidence.filter(function(x){return x.claimId===node.id}).map(function(x){return{text:x.evidenceClass+" · "+x.title}}))},
+      {title:"Indexed source areas",items:sourceAreas.filter(function(x){return x.claimId===node.id}).map(function(x){return{text:x.title+" · "+x.artifactIds.length+" artifacts"}})},
       {title:"Verification",items:reviews.filter(function(x){return x.claimId===node.id}).map(function(x){return{text:x.status+" · "+x.title,className:itemClass(x.status)}})}
     ]
   }
   if(node.type==="study")sections=[{title:"Kind",items:[{text:src.kind||"STUDY"}]}];
   if(node.type==="evidence")sections=[{title:"Evidence class",items:[{text:src.evidenceClass||"evidence"}]},{title:"Provenance",items:[{text:src.path||"—"}]}];
   if(node.type==="review")sections=[{title:"Status",items:[{text:src.status||"UNKNOWN",className:itemClass(src.status)}]}];
+  if(node.type==="source-area")sections=[{title:"Generated source detail",items:[{text:(src.artifactIds||[]).length+" indexed artifacts · "+(src.family||"other")},{text:expanded.has(node.id)?"Expanded L4 artifacts":"Activate to reveal L4 source artifacts"}]}];
+  if(node.type==="artifact")sections=[{title:"Provenance",items:[{text:src.path||"—"},{text:"mapping "+Number(src.mappingConfidence||0).toFixed(2)+" · "+(src.mappingReason||"unknown")},{text:src.sha256?"sha256 "+src.sha256:"sha unavailable"}]}];
   setInfo(node,sections);draw()
 }
 function keyboardNodes(){return scene().nodes}
@@ -383,7 +418,7 @@ canvas.addEventListener("wheel",function(event){event.preventDefault();cam.zoom=
 
 document.getElementById("overview").addEventListener("click",resetView);
 document.getElementById("expandAll3d").addEventListener("click",function(){
-  topics.forEach(function(t){expanded.add(t.id)});claims.forEach(function(c){expanded.add(c.id)});cam.zoom=.58;cam.panX=0;cam.panY=0;spotlightId=null;info.hidden=true;draw()
+  topics.forEach(function(t){expanded.add(t.id)});claims.forEach(function(c){expanded.add(c.id)});sourceAreas.forEach(function(a){expanded.add(a.id)});cam.zoom=.46;cam.panX=0;cam.panY=0;spotlightId=null;info.hidden=true;draw()
 });
 var edgeFilterButton=document.getElementById("edgeFilters"),edgeFilterPanel=document.getElementById("edgeFilterPanel");
 edgeFilterButton.addEventListener("click",function(){var open=edgeFilterPanel.hidden;edgeFilterPanel.hidden=!open;edgeFilterButton.setAttribute("aria-expanded",open?"true":"false")});
