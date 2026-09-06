@@ -7,6 +7,8 @@ import { buildVerificationGraph } from "../intelligence/verification-graph.mjs";
 import { researchChangeIntelligence } from "../intelligence/change-intelligence.mjs";
 import { replayFrame, replayTimeline } from "../intelligence/research-replay.mjs";
 import { renderGraphV2 } from "./render-graph-v2.mjs";
+import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
+import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 const knowledge = loadKnowledge();
@@ -30,6 +32,8 @@ switch (command) {
     print({ generatedAt:index.generatedAt, rootPresent:index.rootPresent, files:index.files, chunks:index.chunks.length });
     break;
   }
+  case "repository-status": print(repositoryStatusSummary({ knowledge })); break;
+  case "claim-evidence-matrix": print(buildClaimEvidenceMatrix(knowledge)); break;
   case "render-graph": print(renderGraphV2({ knowledge })); break;
   default:
     console.error(`Usage:
@@ -45,6 +49,8 @@ switch (command) {
   node scripts/research-intelligence.mjs change "<files>" "<topics>"
   node scripts/research-intelligence.mjs replay [sequence]
   node scripts/research-intelligence.mjs build-index
+  node scripts/research-intelligence.mjs repository-status
+  node scripts/research-intelligence.mjs claim-evidence-matrix
   node scripts/research-intelligence.mjs render-graph`);
     process.exitCode = 2;
 }

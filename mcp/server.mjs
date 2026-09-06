@@ -8,6 +8,8 @@ import { buildVerificationGraph } from "../intelligence/verification-graph.mjs";
 import { researchChangeIntelligence } from "../intelligence/change-intelligence.mjs";
 import { replayFrame, replayTimeline } from "../intelligence/research-replay.mjs";
 import { renderGraphV2 } from "../scripts/render-graph-v2.mjs";
+import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
+import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
 
 const SERVER_NAME="research-workspace-intelligence";
 const SERVER_VERSION="0.1.0";
@@ -24,6 +26,8 @@ const TOOLS=Object.freeze([
   {name:"verification_graph",description:"Return Claim/Evidence/Review nodes and validated-by/supported-by coverage.",inputSchema:schema({})},
   {name:"change_intelligence",description:"Return semantic research changes plus Claim/Topic impact propagation.",inputSchema:schema({changed_files:{type:"array",items:{type:"string"},default:[]},changed_topics:{type:"array",items:{type:"string"},default:[]}})},
   {name:"replay",description:"Return Research Replay timeline or one historical frame.",inputSchema:schema({sequence:{type:["integer","null"],default:null}})},
+  {name:"repository_status",description:"Report local ResearchWorkspace/thesis repository branch, HEAD, dirty state and snapshot drift.",inputSchema:schema({})},
+  {name:"claim_evidence_matrix",description:"Return the current Claim-to-Evidence traceability matrix.",inputSchema:schema({})},
   {name:"refresh_index",description:"Rebuild the thesis source/document index and regenerate viewer data.",inputSchema:schema({})},
   {name:"summary",description:"Return counts and snapshot metadata for ResearchWorkspace.",inputSchema:schema({})}
 ]);
@@ -42,6 +46,8 @@ function callTool(name,args={}){
     case"verification_graph":return buildVerificationGraph(knowledge);
     case"change_intelligence":return researchChangeIntelligence({changedFiles:args.changed_files??[],changedTopics:args.changed_topics??[],knowledge});
     case"replay":return args.sequence==null?replayTimeline():replayFrame(args.sequence);
+    case"repository_status":return repositoryStatusSummary({knowledge});
+    case"claim_evidence_matrix":return buildClaimEvidenceMatrix(knowledge);
     case"refresh_index":{
       const index=buildSourceIndex();
       const graph=renderGraphV2({knowledge});

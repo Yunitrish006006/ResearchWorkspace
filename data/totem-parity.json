@@ -182,11 +182,13 @@
       "status": "partial",
       "evidence": [
         ".github/workflows/pages.yml",
-        "data/repositories.json"
+        "data/repositories.json",
+        "intelligence/repository-status.mjs",
+        "intelligence/claim-evidence-matrix.mjs"
       ],
       "missing": [
-        "local repository status/drift",
-        "incremental thesis index refresh"
+        "incremental thesis index refresh",
+        "artifact drift overlay"
       ]
     },
     {

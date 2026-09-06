@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
+import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
+const matrix=buildClaimEvidenceMatrix();
+assert.ok(matrix.rows.length>=10);
+assert.ok(matrix.rows.some((x)=>x.claimId==="claim-causal"&&x.unresolved));
+assert.ok(matrix.rows.some((x)=>x.evidence.some((e)=>e.evidenceClass==="real target-point")));
+const status=repositoryStatusSummary();
+assert.ok(status.repositories.some((x)=>x.id==="research-workspace"));
+assert.ok(status.repositories.some((x)=>x.id==="thesis"));
+console.log("Repository status and Claim-to-Evidence Matrix OK");
