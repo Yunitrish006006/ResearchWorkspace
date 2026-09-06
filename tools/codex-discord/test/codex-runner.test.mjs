@@ -16,9 +16,9 @@ test("Codex App Server sessions always confine writes to the selected workspace"
     developerInstructions: start.developerInstructions,
     model: "gpt-5.6-terra"
   });
-  assert.match(start.developerInstructions, /delegate the implementation to one implementation-focused subagent/);
-  assert.match(start.developerInstructions, new RegExp(CODING_SUBAGENT_MODEL));
-  assert.match(start.developerInstructions, /medium reasoning effort/);
+  assert.match(start.developerInstructions, /Evidence Extractor/);
+  assert.match(start.developerInstructions, /four subagents/);
+  assert.match(start.developerInstructions, /scientific evidence boundaries/);
   assert.equal(JSON.stringify(start).includes("danger-full-access"), false);
   const resumed = threadResumeParams({ threadId: "thread-123", workspace: "/srv/nexus" });
   assert.deepEqual(resumed.runtimeWorkspaceRoots, ["/srv/nexus"]);
