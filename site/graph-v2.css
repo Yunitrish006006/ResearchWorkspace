@@ -43,3 +43,16 @@ button:hover,.button-link:hover{background:#17344f}
 .prompt-bar button{white-space:nowrap}
 .replay-bar{display:flex;align-items:center;gap:9px;padding:6px 12px;background:#120d1b;border-bottom:1px solid #4c3566}
 .replay-bar[hidden]{display:none}.replay-bar b{min-width:94px;color:#c4b5fd;font-size:11px;letter-spacing:.3px}.replay-bar input[type="range"]{flex:1;min-width:120px}.replay-bar small{color:#9fb4ca;white-space:nowrap}.replay-bar button{padding:5px 9px}
+
+.conversation-panel{position:absolute;left:14px;top:60px;z-index:5;width:min(430px,calc(100% - 28px));max-height:calc(100% - 120px);display:flex;flex-direction:column;border:1px solid #4c3566;border-radius:13px;background:#0c1421f4;box-shadow:0 18px 44px #0009;overflow:hidden}
+.conversation-panel[hidden]{display:none}
+.conversation-head{display:flex;align-items:center;gap:8px;padding:10px 11px;border-bottom:1px solid #342746;background:#160f20}
+.conversation-head>div{flex:1;min-width:0}.conversation-head b{display:block;color:#e9d5ff;font-size:12px}.conversation-head small{display:block;color:#a78bba;font-size:9px;margin-top:2px}.conversation-head button{padding:3px 8px;font-size:15px}
+.conversation-draft{margin:9px 9px 0;padding:8px 9px;border:1px solid #6d4c78;border-radius:8px;background:#1e1627;color:#e9d5ff;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+.conversation-draft[hidden]{display:none}
+.conversation-entries{padding:9px;overflow:auto}
+.conversation-entry{margin-bottom:8px;padding:8px 9px;border:1px solid #29445a;border-radius:8px;background:#0b1b29}
+.conversation-entry.prompt{border-color:#24536b}.conversation-entry.failed{border-color:#713b3b;background:#241010}
+.conversation-entry .meta{display:flex;justify-content:space-between;gap:8px;color:#67e8f9;font-size:9px;font-weight:800;text-transform:uppercase}
+.conversation-entry .text{margin-top:5px;color:#d7e5f4;font-size:11px;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;max-height:140px;overflow:auto}
+@media(max-width:820px){.conversation-panel{left:8px;right:8px;top:8px;width:auto;max-height:70%}}

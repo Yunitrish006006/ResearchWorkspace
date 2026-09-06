@@ -216,7 +216,11 @@
       "evidence": [
         "intelligence/conversation-sync.mjs",
         "scripts/serve-local-viewer.mjs",
-        "scripts/validate-conversation-sync.mjs"
+        "scripts/validate-conversation-sync.mjs",
+        "viewer_flutter/lib/live/workspace_live.dart",
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "site/local-live.js",
+        "site/index.html"
       ]
     },
     {

@@ -25,6 +25,7 @@
     <span class="pill artifact-drift" id="artifactDrift" hidden>ARTIFACT</span>
     <span class="pill agent-activity" id="agentActivity" hidden>AGENT</span>
     <button id="promptToggle" type="button" hidden>Prompt OFF</button>
+    <button id="conversationToggle" type="button" hidden>Conversation</button>
     <a class="button-link" href="./overview.html">研究總覽</a>
     <a class="button-link" href="https://github.com/Yunitrish006006/ResearchWorkspace">GitHub ↗</a>
     <button id="overview" type="button">總覽</button>
@@ -66,6 +67,18 @@
       <canvas id="graph3d" class="canvas3d" tabindex="0" role="application" aria-label="ResearchWorkspace 3D 研究圖；方向鍵切換節點，Enter 或空白鍵啟動"></canvas>
       <div class="hint3d">點 Topic 展開 Claim｜點 Claim 展開 Study / Evidence / Verification｜左鍵旋轉・右鍵拖曳平移・滾輪縮放｜手機一指旋轉・兩指縮放＋平移｜方向鍵選節點・Enter / Space 啟動</div>
     </section>
+
+    <aside id="conversationPanel" class="conversation-panel" hidden>
+      <div class="conversation-head">
+        <div>
+          <b>Research Conversation</b>
+          <small>Local Viewer ↔ Discord shared Bridge queue</small>
+        </div>
+        <button id="conversationClose" type="button" aria-label="關閉 Research Conversation">×</button>
+      </div>
+      <div id="conversationDraft" class="conversation-draft" hidden></div>
+      <div id="conversationEntries" class="conversation-entries"></div>
+    </aside>
 
     <aside id="info" class="info" hidden>
       <div class="info-eyebrow" id="infoType">NODE</div>

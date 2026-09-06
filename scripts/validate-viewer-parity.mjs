@@ -11,7 +11,8 @@ const html=fs.readFileSync(new URL("../site/index.html",import.meta.url),"utf8")
 
 const endpoints=[
   "/api/repository-status","/api/change-intelligence","/api/verification-state",
-  "/api/artifact-drift","/api/activity","/api/replay","/api/viewer-settings","/api/agent-adapter"
+  "/api/artifact-drift","/api/activity","/api/replay","/api/viewer-settings","/api/agent-adapter",
+  "/api/conversation","/api/conversation/draft"
 ];
 for(const endpoint of endpoints){
   assert.ok(flutterLive.includes(endpoint),"Flutter live client missing "+endpoint);
@@ -24,6 +25,11 @@ for(const semantic of ["changedEntityIds","impactedTopicIds","runningVerificatio
 assert.ok(flutter.includes("ArtifactDrift"));
 assert.ok(legacy.includes("artifact.driftCount"));
 assert.ok(html.includes('id="artifactDrift"'));
+assert.ok(html.includes('id="conversationPanel"'));
+assert.ok(html.includes('id="conversationToggle"'));
+assert.ok(flutter.includes("Research Conversation"));
+assert.ok(legacy.includes("pollConversation"));
+assert.ok(legacy.includes("syncDraft"));
 
 for(const relation of ["contains","supports","uses-method","grounded-in","validated-by","limits"]){
   assert.ok(flutter.includes("'"+relation+"'")||flutterScene.includes("'"+relation+"'"),"Flutter relation missing "+relation);
