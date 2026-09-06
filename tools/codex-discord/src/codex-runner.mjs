@@ -11,9 +11,13 @@ const MODEL_LIST_PAGE_SIZE = 100;
 export const CODING_SUBAGENT_MODEL = "gpt-5.3-codex-spark";
 const CODING_SUBAGENT_REASONING_EFFORT = "medium";
 const DISCORD_DEVELOPER_INSTRUCTIONS = `\nYou are the primary research-engineering lead and orchestrator for tasks sent through ResearchWorkspace CodexDiscord.\nInspect AGENTS.md, the ResearchWorkspace graph, the canonical thesis repository, OpenSpec, experiment registries, Claim-to-Evidence mappings, source provenance, and current repository state before making assumptions.\n\nTreat ResearchWorkspace and Three-Factor-Digital-Twin as one research system with distinct ownership: ResearchWorkspace owns cross-artifact intelligence and orchestration; the thesis repository owns manuscript, experiments, methods, figures, outputs, and thesis-facing artifacts.\n\nChoose subagents dynamically and use the minimum useful set. Map roles to Literature Scout, Methodology Analyst, Evidence Extractor, Independent Reviewer, and Research Synthesizer. Read-heavy investigation and methodology review are read-only. Evidence Extractors must have one bounded Topic write scope. Do not exceed four subagents or two parallel Evidence Extractors. For primary-only work, do not spawn subagents. If multi-agent execution is unavailable, preserve the same waves sequentially.\n\nMaintain scientific evidence boundaries. Never conflate synthetic full-field evidence, real target-point evidence, public task-aligned benchmarks, and intervention evidence. Do not strengthen a Claim beyond its registered Evidence and Verification state. Negative results, strong baselines, missing intervention evidence, and artifact drift must remain visible.\n\nFor changes affecting methods, experiments, metrics, figures, results, or manuscript claims, identify impacted Claims and downstream thesis-facing artifacts before editing. Use existing validators, experiment scripts, tests, and reproducibility checks. Do not report success when relevant validation failed; distinguish pre-existing failures from failures introduced by the task.\n\nThe primary coordinator owns final correctness: review resulting diffs, evidence provenance, Claim-to-Evidence traceability, and synchronization across thesis Markdown, IEEE manuscript, figures, and presentation artifacts when those surfaces are affected.\n\nKeep the final Discord response concise: summarize the result, affected Topics/Claims/artifacts, validation performed, evidence limitations, and important remaining risks. Do not expose secrets, absolute local paths, hidden reasoning, or raw subagent conversations.\n`.trim();
-const GRADLE_EXECUTABLE = /(?:^|\/)gradlew?$/;
-const GRADLE_SAFE_FLAG = /^(?:--(?:no-daemon|stacktrace|full-stacktrace|info|debug|offline|rerun-tasks|continue|configuration-cache|no-configuration-cache|build-cache|no-build-cache)|--(?:console|warning-mode)=[a-z-]+|-[qidsS])$/;
-const GRADLE_COMPILE_TASK = /^(?::[a-zA-Z0-9_.-]+)*(?::)?(?:assemble|build|classes|compile[a-zA-Z0-9]*|jar|test|check|process[a-zA-Z0-9]*Resources|run(?:Client)?GameTest)$/;
+const RESEARCH_VALIDATION_COMMANDS = new Set([
+  "node scripts/validate-all.mjs",
+  "python scripts/verify_thesis_results.py",
+  "python3 scripts/verify_thesis_results.py",
+  "python scripts/validate_research_openspec.py",
+  "python3 scripts/validate_research_openspec.py"
+]);
 
 export function validatePrompt(prompt) {
   const normalized = prompt?.trim();
@@ -140,23 +144,18 @@ export function approvalResponse(approval, choice) {
 }
 
 /**
- * Gradle compilation, test, and packaging tasks are repeatable local checks
- * for this bridge. Auto-approval intentionally excludes shell wrappers,
- * deletion, publishing, arbitrary Gradle properties, and all non-Gradle work.
+ * Only a very small set of repository-owned, repeatable research validation
+ * commands can bypass the interactive command approval card. Shell wrappers,
+ * extra flags, arbitrary scripts, network requests, experiment execution,
+ * publishing and artifact generation remain approval-gated.
  */
-export function isAutoApprovedGradleCompile(approval) {
+export function isAutoApprovedResearchValidation(approval) {
   if (approval?.kind !== "command" || typeof approval.command !== "string") return false;
   if (approval.network) return false;
   if (Array.isArray(approval.availableDecisions) && !approval.availableDecisions.includes("accept")) return false;
-
-  const command = approval.command.trim();
+  const command = approval.command.trim().replace(/\s+/g, " ");
   if (!command || /[|;&><`$\r\n]/.test(command)) return false;
-  const [executable, ...arguments_] = command.split(/\s+/);
-  if (!GRADLE_EXECUTABLE.test(executable)) return false;
-
-  const tasks = arguments_.filter((argument) => !argument.startsWith("-"));
-  return tasks.length > 0
-    && arguments_.every((argument) => argument.startsWith("-") ? GRADLE_SAFE_FLAG.test(argument) : GRADLE_COMPILE_TASK.test(argument));
+  return RESEARCH_VALIDATION_COMMANDS.has(command);
 }
 
 export function finalAgentMessage(turn) {
@@ -812,14 +811,14 @@ export class CodexRunner {
               safeProgress({ method: "bridge/allPermissionsAutoApproved", params: { requestId: approval.requestId } });
               return;
             }
-            if (isAutoApprovedGradleCompile(approval)) {
+            if (isAutoApprovedResearchValidation(approval)) {
               pendingApprovals.delete(approval.requestId);
               const accepted = send({
                 id: Number.isSafeInteger(Number(approval.requestId)) ? Number(approval.requestId) : approval.requestId,
                 result: approvalResponse(approval, "allow")
               });
               if (!accepted) fail(new Error("Codex App Server is no longer running"));
-              else safeProgress({ method: "bridge/gradleAutoApproved", params: {} });
+              else safeProgress({ method: "bridge/researchValidationAutoApproved", params: {} });
               return;
             }
             safeProgress({ method: "bridge/approvalRequested", params: approval });

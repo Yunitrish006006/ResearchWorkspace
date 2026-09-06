@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { approvalResponse, CODING_SUBAGENT_MODEL, CodexRunner, finalAgentMessage, generatedImagePaths, imageInputs, isAutoApprovedGradleCompile, threadResumeParams, threadStartParams, turnStartParams, turnSteerParams, validateModel, validatePrompt, validateReasoningEffort } from "../src/codex-runner.mjs";
+import { approvalResponse, CODING_SUBAGENT_MODEL, CodexRunner, finalAgentMessage, generatedImagePaths, imageInputs, isAutoApprovedResearchValidation, threadResumeParams, threadStartParams, turnStartParams, turnSteerParams, validateModel, validatePrompt, validateReasoningEffort } from "../src/codex-runner.mjs";
 import { taskKey } from "../src/session-store.mjs";
 
 test("Codex App Server sessions always confine writes to the selected workspace", () => {
@@ -87,17 +87,18 @@ test("approval responses are scoped and never auto-grant unrequested permissions
   assert.deepEqual(approvalResponse(permissions, "decline"), { permissions: {}, scope: "turn" });
 });
 
-test("only direct Gradle compile, test, and build commands are automatically approved", () => {
+test("only exact research validation commands are automatically approved", () => {
   const approval = (command, availableDecisions = ["accept", "decline"]) => ({ kind: "command", command, availableDecisions });
-  assert.equal(isAutoApprovedGradleCompile(approval("./gradlew :module:compileJava --no-daemon")), true);
-  assert.equal(isAutoApprovedGradleCompile(approval("../TotemCore/gradlew build --stacktrace")), true);
-  assert.equal(isAutoApprovedGradleCompile(approval("./gradlew clean build")), false);
-  assert.equal(isAutoApprovedGradleCompile(approval("./gradlew publish")), false);
-  assert.equal(isAutoApprovedGradleCompile(approval("bash -lc './gradlew build'")), false);
-  assert.equal(isAutoApprovedGradleCompile(approval("./gradlew build -Pversion=1.2.3")), false);
-  assert.equal(isAutoApprovedGradleCompile(approval("./gradlew build", ["decline"])), false);
-  assert.equal(isAutoApprovedGradleCompile({ ...approval("./gradlew build"), network: { host: "repo.example" } }), false);
-  assert.equal(isAutoApprovedGradleCompile({ kind: "permissions", command: "./gradlew build" }), false);
+  assert.equal(isAutoApprovedResearchValidation(approval("node scripts/validate-all.mjs")), true);
+  assert.equal(isAutoApprovedResearchValidation(approval("python scripts/verify_thesis_results.py")), true);
+  assert.equal(isAutoApprovedResearchValidation(approval("python3 scripts/validate_research_openspec.py")), true);
+  assert.equal(isAutoApprovedResearchValidation(approval("node scripts/research-intelligence.mjs summary")), false);
+  assert.equal(isAutoApprovedResearchValidation(approval("python scripts/run_all_thesis_experiments.py")), false);
+  assert.equal(isAutoApprovedResearchValidation(approval("bash -lc 'node scripts/validate-all.mjs'")), false);
+  assert.equal(isAutoApprovedResearchValidation(approval("node scripts/validate-all.mjs --extra")), false);
+  assert.equal(isAutoApprovedResearchValidation(approval("node scripts/validate-all.mjs", ["decline"])), false);
+  assert.equal(isAutoApprovedResearchValidation({ ...approval("node scripts/validate-all.mjs"), network: { host: "repo.example" } }), false);
+  assert.equal(isAutoApprovedResearchValidation({ kind: "permissions", command: "node scripts/validate-all.mjs" }), false);
 });
 
 test("final messages and user input are validated before reaching Codex", () => {
