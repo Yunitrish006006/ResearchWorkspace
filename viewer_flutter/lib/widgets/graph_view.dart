@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../live/workspace_live.dart';
 import '../model/graph_data.dart';
 import '../model/graph_scene.dart';
+import 'collapsible_message.dart';
+import 'floating_panel.dart';
 
 class GraphView extends StatefulWidget {
   const GraphView({super.key, required this.data});
@@ -42,6 +44,8 @@ class _GraphViewState extends State<GraphView> {
   bool _probing = true;
   bool _submitting = false;
   final TextEditingController _promptController = TextEditingController();
+  FloatingPanelDock _detailsDock = FloatingPanelDock.topRight;
+  bool _detailsCollapsed = false;
 
   GraphScene get _scene => buildGraphScene(_data, expanded: _expanded);
 
@@ -331,33 +335,35 @@ class _GraphViewState extends State<GraphView> {
             ),
           ),
         if (selected != null)
-          Positioned(
-            right: 12,
-            top: 12,
-            bottom: 12,
-            child: SizedBox(
-              width: math.min(430, mediaWidth - 24),
-              child: _Panel(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: [
-                    Text(selected.kind.toUpperCase(), style: const TextStyle(color: Color(0xFF67E8F9), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
-                    const SizedBox(height: 5),
-                    Text(selected.label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                    const SizedBox(height: 8),
-                    Text(selected.summary, style: const TextStyle(color: Color(0xFFB8C9DA), height: 1.5)),
-                    if (selected.status != null) _InfoItem('STATUS · ' + selected.status!),
-                    if (selected.detail != null) _InfoItem(selected.detail!),
-                    const SizedBox(height: 12),
-                    Text(
-                      selected.kind == 'topic' || selected.kind == 'claim' || selected.kind == 'source-area'
-                        ? (_expanded.contains(selected.id) ? 'Expanded semantic cluster' : 'Tap again to expand semantic cluster')
-                        : 'Evidence-level node',
-                      style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11),
-                    ),
-                  ],
+          FloatingPanel(
+            title: selected.label,
+            icon: Icons.account_tree_outlined,
+            dock: _detailsDock,
+            collapsed: _detailsCollapsed,
+            width: math.min(430, mediaWidth - 24),
+            expandedHeight: math.max(180, MediaQuery.sizeOf(context).height - 96),
+            onCollapsedChanged: (value) => setState(() => _detailsCollapsed = value),
+            onDockChanged: (value) => setState(() => _detailsDock = value),
+            onClose: () => setState(() => _selectedId = null),
+            child: ListView(
+              padding: const EdgeInsets.all(14),
+              shrinkWrap: true,
+              children: [
+                Text(selected.kind.toUpperCase(), style: const TextStyle(color: Color(0xFF67E8F9), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                const SizedBox(height: 5),
+                Text(selected.label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                const SizedBox(height: 8),
+                CollapsibleMessage(text: selected.summary, style: const TextStyle(color: Color(0xFFB8C9DA), height: 1.5)),
+                if (selected.status != null) _InfoItem('STATUS · ' + selected.status!),
+                if (selected.detail != null) _InfoItem(selected.detail!),
+                const SizedBox(height: 12),
+                Text(
+                  selected.kind == 'topic' || selected.kind == 'claim' || selected.kind == 'source-area'
+                    ? (_expanded.contains(selected.id) ? 'Expanded semantic cluster' : 'Tap again to expand semantic cluster')
+                    : 'Evidence-level node',
+                  style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11),
                 ),
-              ),
+              ],
             ),
           ),
         if (_client != null && _settings.promptEnabled)
