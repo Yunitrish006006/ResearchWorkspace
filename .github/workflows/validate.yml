@@ -1,0 +1,24 @@
+name: Validate ResearchWorkspace
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["20.19.4", "22"]
+    name: validate (Node ${{ matrix.node-version }})
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Validate research intelligence
+        run: node scripts/validate-all.mjs
+      - name: Regenerate legacy graph data
+        run: node scripts/render-graph-v2.mjs

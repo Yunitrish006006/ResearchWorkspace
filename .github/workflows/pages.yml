@@ -1,42 +1,58 @@
 name: Deploy ResearchWorkspace Pages
-
 on:
   push:
     branches: [main]
-    paths:
-      - "site/**"
-      - ".github/workflows/pages.yml"
+  schedule:
+    - cron: "31 * * * *"
   workflow_dispatch:
-
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: "pages"
+  group: github-pages
   cancel-in-progress: true
-
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out ResearchWorkspace
+        uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate ResearchWorkspace
+        run: node scripts/validate-all.mjs
+      - name: Clone canonical thesis repository
+        run: git clone --depth=1 --single-branch --branch main https://github.com/Yunitrish006006/Three-Factor-Digital-Twin.git ../Three-Factor-Digital-Twin
+      - name: Build latest thesis source index and graph data
+        env:
+          RESEARCH_THESIS_REPO: ${{ github.workspace }}/../Three-Factor-Digital-Twin
+        run: |
+          node scripts/research-intelligence.mjs build-index
+          node scripts/research-intelligence.mjs render-graph
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Prepare static site
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp -R site/. _site/
+          touch _site/.nojekyll
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
+    needs: build
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-        with:
-          enablement: true
-
-      - name: Upload static site
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: site
-
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
