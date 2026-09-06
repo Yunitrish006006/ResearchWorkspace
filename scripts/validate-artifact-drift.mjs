@@ -8,9 +8,13 @@ import { artifactDriftStatus } from "../intelligence/artifact-drift.mjs";
 const root=fs.mkdtempSync(path.join(os.tmpdir(),"artifact-drift-"));
 const run=(args)=>execFileSync("git",args,{cwd:root,encoding:"utf8"});
 run(["init"]);run(["config","user.email","test@example.com"]);run(["config","user.name","Test"]);
+let commitClock=0;
 function commit(file,body,message){
   const full=path.join(root,file);fs.mkdirSync(path.dirname(full),{recursive:true});fs.writeFileSync(full,body);
-  run(["add",file]);run(["commit","-m",message]);
+  run(["add",file]);
+  commitClock+=1;
+  const date=new Date(Date.UTC(2026,0,1,0,0,commitClock)).toISOString();
+  execFileSync("git",["commit","-m",message],{cwd:root,encoding:"utf8",env:{...process.env,GIT_AUTHOR_DATE:date,GIT_COMMITTER_DATE:date}});
 }
 commit("docs/papers/thesis/thesis_draft_zh.tex","old thesis","thesis");
 commit("docs/papers/ieee/paper.tex","old ieee","ieee");
