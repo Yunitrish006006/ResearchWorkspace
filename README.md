@@ -1,58 +1,130 @@
-# ResearchWorkspace — reference-driven bootstrap
+# ResearchWorkspace
 
-ResearchWorkspace is a research-domain generalization of the proven architectural patterns in `Yunitrish006006/TotemWorkspace`.
+ResearchWorkspace is the research-intelligence coordination layer for
+`Yunitrish006006/Three-Factor-Digital-Twin`. Its system architecture is a
+research-domain port of the production contracts in
+`Yunitrish006006/TotemWorkspace`, not a visual-only fork.
 
-This bootstrap was designed after auditing TotemWorkspace `main` at commit `bc333be5ced66b6310b1b2acb56ba91b93145577` rather than treating TotemWorkspace as visual inspiration only.
+Reference baseline: `TotemWorkspace@74822eb2de6a6bdf31c595b4f148a536a023b105`.
 
-## What is implemented now
+## Production surfaces
 
-- stable research entity IDs
-- typed research graph relations
-- graph-first task resolution
-- audience-specific Context Packs
-- opt-in Codex Agent Adapter with the same orchestration envelope
-- source/document lexical index with provenance excerpts
-- adaptive orchestration with the same four mode thresholds
-- bounded research roles
-- Claim Verification Graph bootstrap
-- live verification state folding
-- research activity stream
-- durable Research Replay and checkpoints
-- Research Change Intelligence semantic snapshot/diff core
-- loopback-only Local Bridge
-- stdio MCP server
-- legacy browser viewer consuming the shared graph/API
-- Flutter shared graph/live-state contract skeleton
-- regression validators and GitHub Actions workflow
+- **GitHub Pages / Flutter Wasm:** https://yunitrish006006.github.io/ResearchWorkspace/
+- **Legacy JavaScript 3D viewer:** https://yunitrish006006.github.io/ResearchWorkspace/legacy/
+- **Research overview:** https://yunitrish006006.github.io/ResearchWorkspace/overview.html
+- **Local Bridge:** `http://127.0.0.1:18775/`
 
-## Intentionally not copied
+GitHub Pages builds from the latest canonical thesis checkout, rebuilds the source/document
+index and the shared graph model, then publishes Flutter as the production root while retaining
+the JavaScript viewer as a rollback/debug surface.
 
-- Minecraft/Fabric module relationships
-- Gradle/GameTest semantics
-- Java/Kotlin source-code inventory heuristics
-- TotemCore shared API ownership rules
-- source-code implementation nodes as research truth
+## Domain mapping
+
+| TotemWorkspace | ResearchWorkspace |
+|---|---|
+| Module | Research Topic |
+| Feature | Claim / Hypothesis |
+| Component | Study / Evidence Area |
+| Implementation | Paper / Evidence Artifact |
+| Test | Verification / Review |
+| Code Index / Inventory | Source / Document Index / Inventory |
+| Change Intelligence | Research Change Intelligence |
+| Verification Graph | Claim Verification Graph |
+| Development Replay | Research Replay |
+| Explorer | Literature Scout |
+| Architect | Methodology Analyst |
+| Worker | Evidence Extractor |
+| Reviewer | Independent Reviewer |
+| Primary | Research Synthesizer |
+
+Minecraft/Fabric/Gradle semantics are not research truth. Their subsystem positions and safety
+contracts are ported; their domain meaning is replaced.
+
+## Implemented architecture
+
+- stable typed Research Knowledge Graph;
+- source/document index with repository/path/line/SHA-256 provenance;
+- incremental changed-file refresh;
+- high-confidence source → Claim/Evidence/Topic mapping;
+- deterministic adaptive orchestration:
+  - `primary-only`
+  - `assisted`
+  - `bounded-parallel`
+  - `guarded-parallel`
+- maximum four subagents and two parallel Evidence Extractors;
+- audience-specific Context Packs;
+- Claim-to-Evidence Matrix;
+- Claim Verification Graph and live verification telemetry;
+- Research Change Intelligence;
+- Git-based thesis artifact drift detection;
+- durable Research Replay with sessions/checkpoints/historical entity sets;
+- Research Agent Activity;
+- opt-in real Codex Agent Adapter;
+- Viewer ↔ Discord Conversation Sync;
+- Research CodexDiscord;
+- loopback Local Bridge;
+- Remote-SSH/tmux/nohup controller;
+- MCP + CLI;
+- Flutter 3D production viewer and Legacy 3D viewer;
+- Progressive Semantic LOD;
+- GitHub Pages, Node, Flutter, source-inventory, and CodexDiscord CI;
+- machine-readable Totem parity ledger.
+
+The parity ledger is `data/totem-parity.json`.
+
+## Canonical thesis ownership
+
+`Three-Factor-Digital-Twin` remains authoritative for:
+
+- thesis/manuscript source;
+- methods and OpenSpec;
+- experiment implementation;
+- datasets and simulation;
+- figures and generated outputs;
+- results and thesis-facing presentation artifacts.
+
+ResearchWorkspace indexes and relates those artifacts; it does not create a second manually
+maintained copy of the thesis.
 
 ## Quick start
 
-```sh
+```bash
 node scripts/validate-all.mjs
 node scripts/research-intelligence.mjs summary
-node scripts/research-intelligence.mjs resolve "behavioral contracts evidence"
-node scripts/research-intelligence.mjs orchestrate "review contradictory evidence across two studies"
+node scripts/research-intelligence.mjs repository-status
+node scripts/research-intelligence.mjs claim-evidence-matrix
+node scripts/research-intelligence.mjs artifact-drift
 node scripts/research-intelligence.mjs build-index
+node scripts/report-source-inventory.mjs
 node scripts/serve-local-viewer.mjs
 ```
 
-Then open `http://127.0.0.1:18775/`.
+For Remote-SSH:
 
-## MCP
-
-```sh
-node mcp/server.mjs
+```bash
+bash tools/remote/bridge.sh doctor
+bash tools/remote/bridge.sh start
+bash tools/remote/bridge.sh status
 ```
 
-Tools:
+## Real Codex adapter
+
+Disabled by default:
+
+```bash
+export RESEARCH_AGENT_ADAPTER=codex
+export RESEARCH_CODEX_CWD=/path/to/ResearchWorkspace
+export RESEARCH_CODEX_SANDBOX=workspace-write
+node scripts/serve-local-viewer.mjs
+```
+
+The host chooses executable, CWD, sandbox and model. Browser requests cannot override them.
+The adapter never adds `--full-auto` or dangerous sandbox/approval bypass flags.
+
+After a task ends, the Bridge refreshes the source index, updates Change Intelligence, regenerates
+graph data, and records a Replay checkpoint.
+
+## MCP tools
 
 - `resolve_task`
 - `orchestration_plan`
@@ -61,26 +133,25 @@ Tools:
 - `context_pack`
 - `impact`
 - `verification_plan`
-- `test_plan` (compatibility alias)
+- `test_plan`
+- `verification_graph`
+- `verification_state`
+- `change_intelligence`
+- `replay`
+- `repository_status`
+- `claim_evidence_matrix`
+- `artifact_drift`
 - `refresh_index`
 - `summary`
 
-## Important boundary
+## Evidence boundary
 
-The bootstrap includes an **opt-in Codex Agent Adapter**. It is disabled by default. `/api/prompt` always records the prompt and deterministic orchestration plan; it dispatches Codex only when `RESEARCH_AGENT_ADAPTER=codex` passes the host-side availability/sandbox/CWD checks. When no adapter is available, the API returns `agent-adapter-unavailable` and never claims execution started. Browser payloads cannot select the executable, CWD, sandbox, or model.
+Synthetic full-field evidence, real target-point evidence, public task-aligned benchmark evidence,
+and intervention/causal evidence are separate evidence classes. One class cannot silently upgrade
+another. Negative results, strong baselines, and missing intervention evidence remain visible.
 
-See `docs/reference-architecture-audit.md` and `docs/architecture.md`.
+## Local state
 
-### Optional Codex adapter
-
-```bash
-export RESEARCH_AGENT_ADAPTER=codex
-export RESEARCH_CODEX_SANDBOX=workspace-write   # or read-only
-# Optional, host-controlled only:
-# export RESEARCH_CODEX_BIN=codex
-# export RESEARCH_CODEX_CWD=/path/to/ResearchWorkspace
-# export RESEARCH_CODEX_MODEL=<model>
-node scripts/serve-local-viewer.mjs
-```
-
-The adapter preserves the TotemWorkspace safety contract: workspace-bounded CWD, explicit sandbox allow-list, one active task at a time, JSONL activity mapping, repository-relative browser-visible paths, the same orchestration envelope used by MCP/Bridge, and no forced `--full-auto` or approval-bypass flags.
+`.research-index/` is disposable and ignored by Git. It may contain source chunks, Change
+Intelligence, verification state, activity and Replay checkpoints. Generated retrieval/viewer data
+does not become canonical scientific evidence.
