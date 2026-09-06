@@ -12,10 +12,14 @@ void main() {
       studies: [GraphStudy(id: 's', claimId: 'c', title: 'Study', kind: 'METHOD', summary: '')],
       evidence: [],
       reviews: [],
+      sourceAreas: [GraphSourceArea(id: 'a', claimId: 'c', family: 'openspec', title: 'Sources', summary: '', artifactIds: ['f'])],
+      artifacts: [GraphArtifact(id: 'f', sourceId: 'source:x', claimId: 'c', areaId: 'a', title: 'spec.md', path: 'spec.md', family: 'openspec', summary: '', sha256: 'abc', chunkCount: 1, mappingConfidence: 1, mappingReason: 'registered')],
       relations: [],
     );
     expect(buildGraphScene(data).nodes.map((x) => x.id), containsAll(['thesis', 't']));
     expect(buildGraphScene(data, expanded: {'t'}).nodes.map((x) => x.id), contains('c'));
-    expect(buildGraphScene(data, expanded: {'t', 'c'}).nodes.map((x) => x.id), contains('s'));
+    final l3 = buildGraphScene(data, expanded: {'t', 'c'});
+    expect(l3.nodes.map((x) => x.id), containsAll(['s', 'a']));
+    expect(buildGraphScene(data, expanded: {'t', 'c', 'a'}).nodes.map((x) => x.id), contains('f'));
   });
 }

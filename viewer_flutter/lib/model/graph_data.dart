@@ -7,6 +7,8 @@ class GraphData {
     required this.studies,
     required this.evidence,
     required this.reviews,
+    this.sourceAreas = const [],
+    this.artifacts = const [],
     required this.relations,
   });
 
@@ -17,6 +19,8 @@ class GraphData {
   final List<GraphStudy> studies;
   final List<GraphEvidence> evidence;
   final List<GraphReview> reviews;
+  final List<GraphSourceArea> sourceAreas;
+  final List<GraphArtifact> artifacts;
   final List<GraphRelation> relations;
 
   factory GraphData.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class GraphData {
       studies: _objects(json['studies']).map(GraphStudy.fromJson).toList(growable: false),
       evidence: _objects(json['evidence']).map(GraphEvidence.fromJson).toList(growable: false),
       reviews: _objects(json['reviews']).map(GraphReview.fromJson).toList(growable: false),
+      sourceAreas: _objects(json['sourceAreas']).map(GraphSourceArea.fromJson).toList(growable: false),
+      artifacts: _objects(json['artifacts']).map(GraphArtifact.fromJson).toList(growable: false),
       relations: _objects(json['relations']).map(GraphRelation.fromJson).toList(growable: false),
     );
   }
@@ -128,6 +134,54 @@ class GraphReview {
     title: json['title'] as String? ?? '',
     summary: json['summary'] as String? ?? '',
     status: json['status'] as String? ?? 'UNKNOWN',
+  );
+}
+
+class GraphSourceArea {
+  const GraphSourceArea({required this.id, required this.claimId, required this.family, required this.title, required this.summary, required this.artifactIds});
+  final String id;
+  final String claimId;
+  final String family;
+  final String title;
+  final String summary;
+  final List<String> artifactIds;
+  factory GraphSourceArea.fromJson(Map<String, dynamic> json) => GraphSourceArea(
+    id: json['id'] as String? ?? '',
+    claimId: json['claimId'] as String? ?? '',
+    family: json['family'] as String? ?? 'other',
+    title: json['title'] as String? ?? 'Source area',
+    summary: json['summary'] as String? ?? '',
+    artifactIds: (json['artifactIds'] as List? ?? const []).whereType<String>().toList(growable: false),
+  );
+}
+
+class GraphArtifact {
+  const GraphArtifact({required this.id, required this.sourceId, required this.claimId, required this.areaId, required this.title, required this.path, required this.family, required this.summary, required this.sha256, required this.chunkCount, required this.mappingConfidence, required this.mappingReason});
+  final String id;
+  final String sourceId;
+  final String claimId;
+  final String areaId;
+  final String title;
+  final String path;
+  final String family;
+  final String summary;
+  final String? sha256;
+  final int chunkCount;
+  final double mappingConfidence;
+  final String mappingReason;
+  factory GraphArtifact.fromJson(Map<String, dynamic> json) => GraphArtifact(
+    id: json['id'] as String? ?? '',
+    sourceId: json['sourceId'] as String? ?? '',
+    claimId: json['claimId'] as String? ?? '',
+    areaId: json['areaId'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    path: json['path'] as String? ?? '',
+    family: json['family'] as String? ?? 'other',
+    summary: json['summary'] as String? ?? '',
+    sha256: json['sha256'] as String?,
+    chunkCount: (json['chunkCount'] as num?)?.toInt() ?? 0,
+    mappingConfidence: (json['mappingConfidence'] as num?)?.toDouble() ?? 0,
+    mappingReason: json['mappingReason'] as String? ?? '',
   );
 }
 

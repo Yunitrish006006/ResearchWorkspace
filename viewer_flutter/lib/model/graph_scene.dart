@@ -169,7 +169,8 @@ GraphScene buildGraphScene(GraphData data, {Set<String> expanded = const {}}) {
     final studies = data.studies.where((x) => x.claimId == claim.id).toList();
     final evidence = data.evidence.where((x) => x.claimId == claim.id).toList();
     final reviews = data.reviews.where((x) => x.claimId == claim.id).toList();
-    final count = studies.length + evidence.length + reviews.length;
+    final sourceAreas = data.sourceAreas.where((x) => x.claimId == claim.id).toList();
+    final count = studies.length + evidence.length + reviews.length + sourceAreas.length;
     final radius = math.min(170.0, 76 + math.sqrt(math.max(1, count)) * 23);
     clusters.add(VisualCluster(ownerId: claim.id, radius: radius, childCount: count));
 
@@ -208,6 +209,40 @@ GraphScene buildGraphScene(GraphData data, {Set<String> expanded = const {}}) {
         status: item.status,
       ));
       edges.add(VisualEdge(id: 'review:' + item.id, from: claim.id, to: item.id, type: 'validated-by', label: item.status));
+    }
+    for (final area in sourceAreas) {
+      nodes.add(VisualNode(
+        id: area.id,
+        kind: 'source-area',
+        label: area.title,
+        summary: area.summary,
+        position: _scatter(parent.position, area.id, 'source-area', radius),
+        ownerId: claim.id,
+        detail: area.artifactIds.length.toString() + ' indexed artifacts · ' + area.family,
+      ));
+      edges.add(VisualEdge(id: 'source-area:' + area.id, from: claim.id, to: area.id, type: 'contains', label: 'source area'));
+    }
+  }
+
+  for (final area in data.sourceAreas) {
+    if (!expanded.contains(area.id)) continue;
+    final parent = _firstNode(nodes.where((x) => x.id == area.id));
+    if (parent == null) continue;
+    final artifacts = data.artifacts.where((x) => x.areaId == area.id).toList();
+    final radius = math.min(135.0, 62 + math.sqrt(math.max(1, artifacts.length)) * 20);
+    clusters.add(VisualCluster(ownerId: area.id, radius: radius, childCount: artifacts.length));
+    for (final artifact in artifacts) {
+      final sha = artifact.sha256 == null ? '' : artifact.sha256!.substring(0, math.min(10, artifact.sha256!.length));
+      nodes.add(VisualNode(
+        id: artifact.id,
+        kind: 'artifact',
+        label: artifact.title,
+        summary: artifact.summary,
+        position: _scatter(parent.position, artifact.id, 'artifact', radius),
+        ownerId: area.id,
+        detail: artifact.path + ' · confidence ' + artifact.mappingConfidence.toStringAsFixed(2) + (sha.isEmpty ? '' : ' · sha ' + sha),
+      ));
+      edges.add(VisualEdge(id: 'artifact:' + artifact.id, from: area.id, to: artifact.id, type: 'contains', label: 'indexed source'));
     }
   }
 

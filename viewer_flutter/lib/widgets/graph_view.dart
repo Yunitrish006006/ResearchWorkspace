@@ -116,7 +116,8 @@ class _GraphViewState extends State<GraphView> {
     _expanded
       ..clear()
       ..addAll(widget.data.topics.map((x) => x.id))
-      ..addAll(widget.data.claims.map((x) => x.id));
+      ..addAll(widget.data.claims.map((x) => x.id))
+      ..addAll(widget.data.sourceAreas.map((x) => x.id));
     _camera = _camera.copyWith(zoom: .58, panX: 0, panY: 0);
   });
 
@@ -125,7 +126,7 @@ class _GraphViewState extends State<GraphView> {
     if (node == null) return;
     setState(() {
       _selectedId = id;
-      if (node.kind == 'topic' || node.kind == 'claim') {
+      if (node.kind == 'topic' || node.kind == 'claim' || node.kind == 'source-area') {
         if (_expanded.contains(id)) {
           _expanded.remove(id);
           if (node.kind == 'topic') {
@@ -339,7 +340,7 @@ class _GraphViewState extends State<GraphView> {
                     if (selected.detail != null) _InfoItem(selected.detail!),
                     const SizedBox(height: 12),
                     Text(
-                      selected.kind == 'topic' || selected.kind == 'claim'
+                      selected.kind == 'topic' || selected.kind == 'claim' || selected.kind == 'source-area'
                         ? (_expanded.contains(selected.id) ? 'Expanded semantic cluster' : 'Tap again to expand semantic cluster')
                         : 'Evidence-level node',
                       style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11),
@@ -630,6 +631,8 @@ class _GraphPainter extends CustomPainter {
     'claim' when node.status == 'PARTIAL' => const Color(0xFFF59E0B),
     'claim' => const Color(0xFFFBBF24),
     'study' => const Color(0xFFA78BFA),
+    'source-area' => const Color(0xFFF472B6),
+    'artifact' => const Color(0xFFA7F3D0),
     'evidence' => const Color(0xFF34D399),
     'review' when node.status == 'FAIL' => const Color(0xFFFB7185),
     'review' when node.status == 'WARN' => const Color(0xFFFBBF24),
