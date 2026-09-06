@@ -7,6 +7,7 @@ import { buildVerificationGraph } from "../intelligence/verification-graph.mjs";
 import { researchChangeIntelligence } from "../intelligence/change-intelligence.mjs";
 import { replayFrame, replayTimeline } from "../intelligence/research-replay.mjs";
 import { renderGraphV2 } from "./render-graph-v2.mjs";
+import { loadVerificationState } from "../intelligence/verification-state.mjs";
 import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
 import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
 
@@ -25,6 +26,7 @@ switch (command) {
   case "impact": print(impactAnalysis({ changedFiles:list(args[0]), changedTopics:list(args[1]) }, knowledge)); break;
   case "verification-plan": print(verificationPlan({ query:args[0] ?? "", changedTopics:list(args[1]), changedFiles:list(args[2]) }, knowledge)); break;
   case "verification-graph": print(buildVerificationGraph(knowledge)); break;
+  case "verification-state": print(loadVerificationState()); break;
   case "change": print(researchChangeIntelligence({ changedFiles:list(args[0]), changedTopics:list(args[1]), knowledge })); break;
   case "replay": print(args[0] == null ? replayTimeline() : replayFrame(Number(args[0]))); break;
   case "build-index": {
@@ -46,6 +48,7 @@ switch (command) {
   node scripts/research-intelligence.mjs impact "<files>" "<topics>"
   node scripts/research-intelligence.mjs verification-plan "<task>" "<topics>" "<files>"
   node scripts/research-intelligence.mjs verification-graph
+  node scripts/research-intelligence.mjs verification-state
   node scripts/research-intelligence.mjs change "<files>" "<topics>"
   node scripts/research-intelligence.mjs replay [sequence]
   node scripts/research-intelligence.mjs build-index

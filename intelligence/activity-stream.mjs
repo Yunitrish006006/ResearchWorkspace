@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { workspaceRoot } from "./research-knowledge.mjs";
 import { appendReplayEvent } from "./research-replay.mjs";
+import { appendVerificationEvent } from "./verification-state.mjs";
 
 const activityPath = path.join(workspaceRoot, ".research-index", "activity.json");
 const allowedTypes = new Set([
@@ -54,5 +55,8 @@ export function emitActivity(event) {
   data.events.push(next);
   write(data);
   appendReplayEvent(next);
+  if (next.type === "verification_started" || next.type === "verification_passed" || next.type === "verification_failed") {
+    appendVerificationEvent(next);
+  }
   return next;
 }

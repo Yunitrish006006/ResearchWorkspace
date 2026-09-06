@@ -137,6 +137,14 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==="/api/orchestration-plan"&&req.method==="POST"){const data=await body(req);return json(req,res,200,buildOrchestrationPlan({query:String(data.query||""),topicId:data.topicId??null,claimId:data.claimId??null,changedTopics:data.changedTopics??[],changedFiles:data.changedFiles??[],knowledge}))}
     if(url.pathname==="/api/change-intelligence"&&req.method==="GET")return json(req,res,200,researchChangeIntelligence({persist:true}));
     if(url.pathname==="/api/verification-state"&&req.method==="GET")return json(req,res,200,loadVerificationState());
+    if(url.pathname==="/api/verification-event"&&req.method==="POST"){
+      const data=await body(req),type=String(data.type||""),targetId=String(data.targetId||"").trim();
+      if(!["verification_started","verification_passed","verification_failed"].includes(type))return json(req,res,400,{error:"invalid-verification-event"});
+      const known=new Set([...knowledge.reviews.map(x=>x.id),...knowledge.claims.map(x=>x.id),...knowledge.verificationChecks.map(x=>x.id)]);
+      if(!known.has(targetId))return json(req,res,400,{error:"unknown-verification-target",targetId});
+      const event=emit({type,targetId,source:String(data.source||"viewer"),summary:String(data.summary||type+" "+targetId).slice(0,500),topicId:data.topicId??null,claimId:data.claimId??null});
+      return json(req,res,202,{event,state:loadVerificationState()});
+    }
     if(url.pathname==="/api/replay"&&req.method==="GET")return json(req,res,200,replayTimeline());
     if(url.pathname==="/api/replay/frame"&&req.method==="GET")return json(req,res,200,replayFrame(Number(url.searchParams.get("sequence")||0)));
     if(url.pathname==="/api/prompt"&&req.method==="POST"){const result=await submitPrompt(await body(req),{source:"viewer"});return json(req,res,result.status,result.payload)}

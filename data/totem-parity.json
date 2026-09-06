@@ -92,14 +92,15 @@
       "id": "verification-graph",
       "totem": "Verification Graph",
       "research": "Claim Verification Graph",
-      "status": "partial",
+      "status": "implemented",
       "evidence": [
         "intelligence/verification-graph.mjs",
-        "intelligence/verification-state.mjs"
-      ],
-      "missing": [
-        "live viewer overlay parity",
-        "verification plan execution telemetry"
+        "intelligence/verification-state.mjs",
+        "intelligence/activity-stream.mjs",
+        "scripts/research-activity.mjs",
+        "scripts/validate-verification-telemetry.mjs",
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "site/local-live.js"
       ]
     },
     {

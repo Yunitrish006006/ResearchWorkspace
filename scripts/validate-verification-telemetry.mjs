@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { emitActivity } from "../intelligence/activity-stream.mjs";
+import { loadVerificationState, verificationStatePath } from "../intelligence/verification-state.mjs";
+const file=verificationStatePath();fs.rmSync(file,{force:true});
+emitActivity({type:"verification_started",targetId:"review-e1",source:"test",summary:"start"});
+assert.ok(loadVerificationState().runningTargetIds.includes("review-e1"));
+emitActivity({type:"verification_passed",targetId:"review-e1",source:"test",summary:"pass"});
+const state=loadVerificationState();
+assert.ok(state.passedTargetIds.includes("review-e1"));assert.ok(!state.runningTargetIds.includes("review-e1"));
+fs.rmSync(file,{force:true});
+console.log("Verification execution telemetry folding OK");
