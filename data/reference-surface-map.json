@@ -3,65 +3,357 @@
   "reference": {
     "repository": "Yunitrish006006/TotemWorkspace",
     "branch": "main",
-    "commit": "74822eb2de6a6bdf31c595b4f148a536a023b105",
+    "commit": "7145982b91bada1817ea8175f9d60076c7f1ffd2",
     "expectedTrackedFiles": 115
   },
   "families": [
-    {"pattern":"^\\.agents/skills/totem-workspace-intelligence/","classification":"port","researchEvidence":[".agents/skills/research-workspace-intelligence/SKILL.md",".agents/skills/research-workspace-intelligence/agents/openai.yaml"]},
-    {"pattern":"^\\.github/workflows/code-inventory\\.yml$","classification":"replace","researchEvidence":[".github/workflows/source-inventory.yml"]},
-    {"pattern":"^\\.github/workflows/(flutter-viewer|pages|validate)\\.yml$","classification":"port","researchEvidence":[".github/workflows/flutter-viewer.yml",".github/workflows/pages.yml",".github/workflows/validate.yml"]},
-    {"pattern":"^\\.gitignore$","classification":"port","researchEvidence":[".gitignore"]},
-    {"pattern":"^\\.vscode/tasks\\.json$","classification":"port","researchEvidence":[".vscode/tasks.json"]},
-    {"pattern":"^(AGENTS\\.md|README\\.md|LICENSE)$","classification":"port","researchEvidence":["AGENTS.md","README.md","LICENSE"]},
-    {"pattern":"^data/","classification":"replace","researchEvidence":["data/research-graph.json","data/aliases.json","data/relationship-audit.json","data/verification-matrix.json"]},
-    {"pattern":"^docs/","classification":"replace","researchEvidence":["docs/codex-intelligence.md","docs/current-status.md","docs/development-guidelines.md","docs/flutter-viewer-roadmap.md","docs/local-live-viewer.md","docs/research-relations.md","docs/release-checklist.md"]},
-    {"pattern":"^intelligence/","classification":"replace","researchEvidence":["intelligence/research-knowledge.mjs","intelligence/source-index.mjs","intelligence/context-pack.mjs","intelligence/orchestration-plan.mjs","intelligence/change-intelligence.mjs","intelligence/verification-graph.mjs","intelligence/verification-state.mjs","intelligence/research-replay.mjs","intelligence/agent-adapter.mjs","intelligence/conversation-sync.mjs"]},
-    {"pattern":"^mcp/","classification":"port","researchEvidence":["mcp/server.mjs"]},
-    {"pattern":"^scripts/","classification":"replace","researchEvidence":["scripts/research-intelligence.mjs","scripts/serve-local-viewer.mjs","scripts/validate-all.mjs","scripts/render-graph-v2.mjs","scripts/render-flutter-graph.mjs"]},
-    {"pattern":"^tools/codex-discord/","classification":"port","researchEvidence":["tools/codex-discord/src/index.mjs","tools/codex-discord/src/bot.mjs","tools/codex-discord/src/codex-runner.mjs","tools/codex-discord/src/workspace-sync.mjs"]},
-    {"pattern":"^tools/remote/","classification":"port","researchEvidence":["tools/remote/bridge.sh","tools/remote/bootstrap-flutter.sh","tools/remote/README.md"]},
-    {"pattern":"^viewer/","classification":"replace","researchEvidence":["site/index.html","site/research-graph-v2.js","site/local-live.js","site/graph-v2.css"]},
-    {"pattern":"^(graph-v2\\.html|index\\.html)$","classification":"replace","researchEvidence":["site/index.html","site/overview.html"]},
-    {"pattern":"^viewer_flutter/","classification":"port","researchEvidence":["viewer_flutter/lib/main.dart","viewer_flutter/lib/model/graph_data.dart","viewer_flutter/lib/model/graph_scene.dart","viewer_flutter/lib/live/workspace_live.dart","viewer_flutter/lib/widgets/graph_view.dart","viewer_flutter/lib/widgets/workspace_graph_host.dart","viewer_flutter/lib/widgets/activity_location.dart","viewer_flutter/lib/widgets/collapsible_message.dart","viewer_flutter/lib/widgets/floating_panel.dart"]}
+    {
+      "pattern": "^\\.agents/skills/totem-workspace-intelligence/",
+      "classification": "port",
+      "researchEvidence": [
+        ".agents/skills/research-workspace-intelligence/SKILL.md",
+        ".agents/skills/research-workspace-intelligence/agents/openai.yaml"
+      ]
+    },
+    {
+      "pattern": "^\\.github/workflows/code-inventory\\.yml$",
+      "classification": "replace",
+      "researchEvidence": [
+        ".github/workflows/source-inventory.yml"
+      ]
+    },
+    {
+      "pattern": "^\\.github/workflows/(flutter-viewer|pages|validate)\\.yml$",
+      "classification": "port",
+      "researchEvidence": [
+        ".github/workflows/flutter-viewer.yml",
+        ".github/workflows/pages.yml",
+        ".github/workflows/validate.yml"
+      ]
+    },
+    {
+      "pattern": "^\\.gitignore$",
+      "classification": "port",
+      "researchEvidence": [
+        ".gitignore"
+      ]
+    },
+    {
+      "pattern": "^\\.vscode/tasks\\.json$",
+      "classification": "port",
+      "researchEvidence": [
+        ".vscode/tasks.json"
+      ]
+    },
+    {
+      "pattern": "^(AGENTS\\.md|README\\.md|LICENSE)$",
+      "classification": "port",
+      "researchEvidence": [
+        "AGENTS.md",
+        "README.md",
+        "LICENSE"
+      ]
+    },
+    {
+      "pattern": "^data/",
+      "classification": "replace",
+      "researchEvidence": [
+        "data/research-graph.json",
+        "data/aliases.json",
+        "data/relationship-audit.json",
+        "data/verification-matrix.json"
+      ]
+    },
+    {
+      "pattern": "^docs/",
+      "classification": "replace",
+      "researchEvidence": [
+        "docs/codex-intelligence.md",
+        "docs/current-status.md",
+        "docs/development-guidelines.md",
+        "docs/flutter-viewer-roadmap.md",
+        "docs/local-live-viewer.md",
+        "docs/research-relations.md",
+        "docs/release-checklist.md"
+      ]
+    },
+    {
+      "pattern": "^intelligence/",
+      "classification": "replace",
+      "researchEvidence": [
+        "intelligence/research-knowledge.mjs",
+        "intelligence/source-index.mjs",
+        "intelligence/context-pack.mjs",
+        "intelligence/orchestration-plan.mjs",
+        "intelligence/change-intelligence.mjs",
+        "intelligence/verification-graph.mjs",
+        "intelligence/verification-state.mjs",
+        "intelligence/research-replay.mjs",
+        "intelligence/agent-adapter.mjs",
+        "intelligence/conversation-sync.mjs"
+      ]
+    },
+    {
+      "pattern": "^mcp/",
+      "classification": "port",
+      "researchEvidence": [
+        "mcp/server.mjs"
+      ]
+    },
+    {
+      "pattern": "^scripts/",
+      "classification": "replace",
+      "researchEvidence": [
+        "scripts/research-intelligence.mjs",
+        "scripts/serve-local-viewer.mjs",
+        "scripts/validate-all.mjs",
+        "scripts/render-graph-v2.mjs",
+        "scripts/render-flutter-graph.mjs"
+      ]
+    },
+    {
+      "pattern": "^tools/codex-discord/",
+      "classification": "port",
+      "researchEvidence": [
+        "tools/codex-discord/src/index.mjs",
+        "tools/codex-discord/src/bot.mjs",
+        "tools/codex-discord/src/codex-runner.mjs",
+        "tools/codex-discord/src/workspace-sync.mjs"
+      ]
+    },
+    {
+      "pattern": "^tools/remote/",
+      "classification": "port",
+      "researchEvidence": [
+        "tools/remote/bridge.sh",
+        "tools/remote/bootstrap-flutter.sh",
+        "tools/remote/README.md"
+      ]
+    },
+    {
+      "pattern": "^viewer/",
+      "classification": "replace",
+      "researchEvidence": [
+        "site/index.html",
+        "site/research-graph-v2.js",
+        "site/local-live.js",
+        "site/graph-v2.css"
+      ]
+    },
+    {
+      "pattern": "^(graph-v2\\.html|index\\.html)$",
+      "classification": "replace",
+      "researchEvidence": [
+        "site/index.html",
+        "site/overview.html"
+      ]
+    },
+    {
+      "pattern": "^viewer_flutter/",
+      "classification": "port",
+      "researchEvidence": [
+        "viewer_flutter/lib/main.dart",
+        "viewer_flutter/lib/model/graph_data.dart",
+        "viewer_flutter/lib/model/graph_scene.dart",
+        "viewer_flutter/lib/live/workspace_live.dart",
+        "viewer_flutter/lib/widgets/graph_view.dart",
+        "viewer_flutter/lib/widgets/workspace_graph_host.dart",
+        "viewer_flutter/lib/widgets/activity_location.dart",
+        "viewer_flutter/lib/widgets/collapsible_message.dart",
+        "viewer_flutter/lib/widgets/floating_panel.dart"
+      ]
+    }
   ],
   "requiredReferencePaths": [
-    {"reference":"intelligence/workspace-knowledge.mjs","research":"intelligence/research-knowledge.mjs","classification":"replace"},
-    {"reference":"intelligence/code-index.mjs","research":"intelligence/source-index.mjs","classification":"replace"},
-    {"reference":"intelligence/code-inventory.mjs","research":"intelligence/source-layer.mjs","classification":"replace"},
-    {"reference":"intelligence/code-graph.mjs","research":"intelligence/graph-view-model.mjs","classification":"replace"},
-    {"reference":"intelligence/context-pack.mjs","research":"intelligence/context-pack.mjs","classification":"port"},
-    {"reference":"intelligence/orchestration-plan.mjs","research":"intelligence/orchestration-plan.mjs","classification":"port"},
-    {"reference":"intelligence/change-intelligence.mjs","research":"intelligence/change-intelligence.mjs","classification":"replace"},
-    {"reference":"intelligence/verification-graph.mjs","research":"intelligence/verification-graph.mjs","classification":"replace"},
-    {"reference":"intelligence/verification-state.mjs","research":"intelligence/verification-state.mjs","classification":"replace"},
-    {"reference":"intelligence/development-replay.mjs","research":"intelligence/research-replay.mjs","classification":"replace"},
-    {"reference":"intelligence/agent-adapter.mjs","research":"intelligence/agent-adapter.mjs","classification":"port"},
-    {"reference":"intelligence/conversation-sync.mjs","research":"intelligence/conversation-sync.mjs","classification":"port"},
-    {"reference":"mcp/server.mjs","research":"mcp/server.mjs","classification":"port"},
-    {"reference":"scripts/serve-local-viewer.mjs","research":"scripts/serve-local-viewer.mjs","classification":"port"},
-    {"reference":"scripts/render-graph-v2.mjs","research":"scripts/render-graph-v2.mjs","classification":"replace"},
-    {"reference":"scripts/render-flutter-graph.mjs","research":"scripts/render-flutter-graph.mjs","classification":"port"},
-    {"reference":"viewer/graph-v2-cluster-v2.js","research":"site/research-graph-v2.js","classification":"replace"},
-    {"reference":"viewer/local-live.js","research":"site/local-live.js","classification":"port"},
-    {"reference":"viewer/graph-v2.css","research":"site/graph-v2.css","classification":"port"},
-    {"reference":"viewer_flutter/lib/model/graph_data.dart","research":"viewer_flutter/lib/model/graph_data.dart","classification":"replace"},
-    {"reference":"viewer_flutter/lib/model/graph_scene.dart","research":"viewer_flutter/lib/model/graph_scene.dart","classification":"replace"},
-    {"reference":"viewer_flutter/lib/live/workspace_live.dart","research":"viewer_flutter/lib/live/workspace_live.dart","classification":"port"},
-    {"reference":"viewer_flutter/lib/widgets/graph_view.dart","research":"viewer_flutter/lib/widgets/graph_view.dart","classification":"port"},
-    {"reference":"viewer_flutter/lib/widgets/workspace_graph_host.dart","research":"viewer_flutter/lib/widgets/workspace_graph_host.dart","classification":"port"},
-    {"reference":"viewer_flutter/lib/widgets/activity_location.dart","research":"viewer_flutter/lib/widgets/activity_location.dart","classification":"port"},
-    {"reference":"viewer_flutter/lib/widgets/collapsible_message.dart","research":"viewer_flutter/lib/widgets/collapsible_message.dart","classification":"port"},
-    {"reference":"viewer_flutter/lib/widgets/floating_panel.dart","research":"viewer_flutter/lib/widgets/floating_panel.dart","classification":"port"},
-    {"reference":"tools/remote/bridge.sh","research":"tools/remote/bridge.sh","classification":"port"},
-    {"reference":"tools/remote/bootstrap-flutter.sh","research":"tools/remote/bootstrap-flutter.sh","classification":"port"},
-    {"reference":"tools/codex-discord/src/index.mjs","research":"tools/codex-discord/src/index.mjs","classification":"port"},
-    {"reference":"tools/codex-discord/src/bot.mjs","research":"tools/codex-discord/src/bot.mjs","classification":"port"},
-    {"reference":"tools/codex-discord/src/codex-runner.mjs","research":"tools/codex-discord/src/codex-runner.mjs","classification":"port"},
-    {"reference":"tools/codex-discord/src/workspace-sync.mjs","research":"tools/codex-discord/src/workspace-sync.mjs","classification":"port"},
-    {"reference":".github/workflows/flutter-viewer.yml","research":".github/workflows/flutter-viewer.yml","classification":"port"},
-    {"reference":".github/workflows/pages.yml","research":".github/workflows/pages.yml","classification":"port"},
-    {"reference":".github/workflows/validate.yml","research":".github/workflows/validate.yml","classification":"port"},
-    {"reference":"AGENTS.md","research":"AGENTS.md","classification":"replace"},
-    {"reference":"LICENSE","research":"LICENSE","classification":"port"}
+    {
+      "reference": "intelligence/workspace-knowledge.mjs",
+      "research": "intelligence/research-knowledge.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/code-index.mjs",
+      "research": "intelligence/source-index.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/code-inventory.mjs",
+      "research": "intelligence/source-layer.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/code-graph.mjs",
+      "research": "intelligence/graph-view-model.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/context-pack.mjs",
+      "research": "intelligence/context-pack.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "intelligence/orchestration-plan.mjs",
+      "research": "intelligence/orchestration-plan.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "intelligence/change-intelligence.mjs",
+      "research": "intelligence/change-intelligence.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/verification-graph.mjs",
+      "research": "intelligence/verification-graph.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/verification-state.mjs",
+      "research": "intelligence/verification-state.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/development-replay.mjs",
+      "research": "intelligence/research-replay.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "intelligence/agent-adapter.mjs",
+      "research": "intelligence/agent-adapter.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "intelligence/conversation-sync.mjs",
+      "research": "intelligence/conversation-sync.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "mcp/server.mjs",
+      "research": "mcp/server.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "scripts/serve-local-viewer.mjs",
+      "research": "scripts/serve-local-viewer.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "scripts/render-graph-v2.mjs",
+      "research": "scripts/render-graph-v2.mjs",
+      "classification": "replace"
+    },
+    {
+      "reference": "scripts/render-flutter-graph.mjs",
+      "research": "scripts/render-flutter-graph.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer/graph-v2-cluster-v2.js",
+      "research": "site/research-graph-v2.js",
+      "classification": "replace"
+    },
+    {
+      "reference": "viewer/local-live.js",
+      "research": "site/local-live.js",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer/graph-v2.css",
+      "research": "site/graph-v2.css",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer_flutter/lib/model/graph_data.dart",
+      "research": "viewer_flutter/lib/model/graph_data.dart",
+      "classification": "replace"
+    },
+    {
+      "reference": "viewer_flutter/lib/model/graph_scene.dart",
+      "research": "viewer_flutter/lib/model/graph_scene.dart",
+      "classification": "replace"
+    },
+    {
+      "reference": "viewer_flutter/lib/live/workspace_live.dart",
+      "research": "viewer_flutter/lib/live/workspace_live.dart",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer_flutter/lib/widgets/graph_view.dart",
+      "research": "viewer_flutter/lib/widgets/graph_view.dart",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer_flutter/lib/widgets/workspace_graph_host.dart",
+      "research": "viewer_flutter/lib/widgets/workspace_graph_host.dart",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer_flutter/lib/widgets/activity_location.dart",
+      "research": "viewer_flutter/lib/widgets/activity_location.dart",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer_flutter/lib/widgets/collapsible_message.dart",
+      "research": "viewer_flutter/lib/widgets/collapsible_message.dart",
+      "classification": "port"
+    },
+    {
+      "reference": "viewer_flutter/lib/widgets/floating_panel.dart",
+      "research": "viewer_flutter/lib/widgets/floating_panel.dart",
+      "classification": "port"
+    },
+    {
+      "reference": "tools/remote/bridge.sh",
+      "research": "tools/remote/bridge.sh",
+      "classification": "port"
+    },
+    {
+      "reference": "tools/remote/bootstrap-flutter.sh",
+      "research": "tools/remote/bootstrap-flutter.sh",
+      "classification": "port"
+    },
+    {
+      "reference": "tools/codex-discord/src/index.mjs",
+      "research": "tools/codex-discord/src/index.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "tools/codex-discord/src/bot.mjs",
+      "research": "tools/codex-discord/src/bot.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "tools/codex-discord/src/codex-runner.mjs",
+      "research": "tools/codex-discord/src/codex-runner.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": "tools/codex-discord/src/workspace-sync.mjs",
+      "research": "tools/codex-discord/src/workspace-sync.mjs",
+      "classification": "port"
+    },
+    {
+      "reference": ".github/workflows/flutter-viewer.yml",
+      "research": ".github/workflows/flutter-viewer.yml",
+      "classification": "port"
+    },
+    {
+      "reference": ".github/workflows/pages.yml",
+      "research": ".github/workflows/pages.yml",
+      "classification": "port"
+    },
+    {
+      "reference": ".github/workflows/validate.yml",
+      "research": ".github/workflows/validate.yml",
+      "classification": "port"
+    },
+    {
+      "reference": "AGENTS.md",
+      "research": "AGENTS.md",
+      "classification": "replace"
+    },
+    {
+      "reference": "LICENSE",
+      "research": "LICENSE",
+      "classification": "port"
+    }
   ]
 }

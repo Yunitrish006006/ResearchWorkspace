@@ -1,0 +1,63 @@
+name: Validate Research Tool Suite
+
+on:
+  push:
+    paths:
+      - "tools/**"
+      - "mcp/**"
+      - ".agents/skills/**"
+      - "intelligence/agent-adapter.mjs"
+      - "intelligence/conversation-sync.mjs"
+      - "intelligence/tool-status.mjs"
+      - "scripts/research-intelligence.mjs"
+      - "scripts/research-activity.mjs"
+      - "scripts/serve-local-viewer.mjs"
+      - "scripts/validate-agent-adapter.mjs"
+      - "scripts/validate-tool-surface.mjs"
+      - "data/tool-surface.json"
+      - "data/reference-surface-map.json"
+      - ".github/workflows/tools.yml"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Clone audited TotemWorkspace tool reference
+        run: git clone --depth=1 --single-branch --branch main https://github.com/Yunitrish006006/TotemWorkspace.git ../TotemWorkspace
+      - name: Validate complete tool surface
+        run: node scripts/validate-tool-surface.mjs --reference-root ../TotemWorkspace
+      - name: Validate Codex Agent Adapter runtime contract
+        run: node scripts/validate-agent-adapter.mjs
+      - name: Validate MCP and Local Bridge contracts
+        run: |
+          node scripts/validate-mcp.mjs
+          node scripts/validate-local-viewer.mjs
+          node scripts/validate-conversation-sync.mjs
+      - name: Validate Remote Bridge
+        run: |
+          bash -n tools/remote/bridge.sh
+          bash -n tools/remote/bootstrap-flutter.sh
+          node scripts/validate-remote-bridge.mjs
+
+  codex-discord:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: tools/codex-discord/package-lock.json
+      - working-directory: tools/codex-discord
+        run: npm ci
+      - working-directory: tools/codex-discord
+        run: npm test

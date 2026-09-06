@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "reference": {
+    "repository": "Yunitrish006006/TotemWorkspace",
+    "branch": "main",
+    "commit": "7145982b91bada1817ea8175f9d60076c7f1ffd2",
+    "expectedToolFiles": 22
+  },
+  "completionRule": "A tool group is complete only when its entry points, commands/routes, safety contracts, and regression tests are present. CI also compares the Totem tools/ file surface at the audited reference commit.",
+  "groups": [
+    {
+      "id": "research-intelligence-cli",
+      "kind": "cli",
+      "entry": "scripts/research-intelligence.mjs",
+      "commands": [
+        "summary",
+        "resolve",
+        "orchestrate",
+        "graph",
+        "search",
+        "context",
+        "impact",
+        "verification-plan",
+        "verification-graph",
+        "verification-state",
+        "change",
+        "replay",
+        "build-index",
+        "status",
+        "repository-status",
+        "claim-evidence-matrix",
+        "artifact-drift",
+        "tool-status",
+        "render-graph"
+      ]
+    },
+    {
+      "id": "research-activity-cli",
+      "kind": "cli",
+      "entry": "scripts/research-activity.mjs",
+      "commands": [
+        "status",
+        "emit",
+        "verify",
+        "replay",
+        "prompt"
+      ]
+    },
+    {
+      "id": "research-mcp",
+      "kind": "mcp",
+      "entry": "mcp/server.mjs",
+      "tools": [
+        "resolve_task",
+        "orchestration_plan",
+        "graph",
+        "search",
+        "context_pack",
+        "impact",
+        "verification_plan",
+        "test_plan",
+        "verification_graph",
+        "verification_state",
+        "change_intelligence",
+        "replay",
+        "workspace_status",
+        "repository_status",
+        "claim_evidence_matrix",
+        "artifact_drift",
+        "refresh_index",
+        "summary",
+        "tool_status"
+      ]
+    },
+    {
+      "id": "local-bridge",
+      "kind": "http",
+      "entry": "scripts/serve-local-viewer.mjs",
+      "routes": [
+        "/api/health",
+        "/api/agent-adapter",
+        "/api/graph-data",
+        "/api/repository-status",
+        "/api/workspace-status",
+        "/api/claim-evidence-matrix",
+        "/api/artifact-drift",
+        "/api/tool-status",
+        "/api/viewer-settings",
+        "/api/activity",
+        "/api/orchestration-plan",
+        "/api/change-intelligence",
+        "/api/verification-state",
+        "/api/verification-event",
+        "/api/replay",
+        "/api/replay/frame",
+        "/api/prompt",
+        "/api/refresh",
+        "/api/conversation",
+        "/api/conversation/draft",
+        "/api/conversation/prompt",
+        "/api/conversation/status",
+        "/api/conversation/cancel"
+      ],
+      "contracts": [
+        "127.0.0.1",
+        "MAX_BODY=64*1024",
+        "MAX_PROMPT=8192",
+        "timingSafeEqual",
+        "Access-Control-Allow-Origin"
+      ]
+    },
+    {
+      "id": "remote-bridge",
+      "kind": "shell",
+      "entry": "tools/remote/bridge.sh",
+      "actions": [
+        "start",
+        "stop",
+        "restart",
+        "status",
+        "logs",
+        "follow",
+        "attach",
+        "doctor"
+      ],
+      "contracts": [
+        "RESEARCH_BRIDGE_FORCE",
+        "guard_agent_idle",
+        "ensure_flutter_build",
+        "RESEARCH_AGENT_ADAPTER",
+        "RESEARCH_CODEX_CWD",
+        "127.0.0.1",
+        "tmux",
+        "nohup"
+      ]
+    },
+    {
+      "id": "flutter-bootstrap",
+      "kind": "shell",
+      "entry": "tools/remote/bootstrap-flutter.sh",
+      "actions": [
+        "install",
+        "path",
+        "status"
+      ],
+      "contracts": [
+        "RESEARCH_FLUTTER_VERSION",
+        "RESEARCH_FLUTTER_HOME",
+        "--no-analytics",
+        "precache --web"
+      ]
+    },
+    {
+      "id": "codex-discord",
+      "kind": "node-package",
+      "entry": "tools/codex-discord/package.json",
+      "files": [
+        "tools/codex-discord/.env.example",
+        "tools/codex-discord/.gitignore",
+        "tools/codex-discord/README.md",
+        "tools/codex-discord/package-lock.json",
+        "tools/codex-discord/package.json",
+        "tools/codex-discord/src/bot.mjs",
+        "tools/codex-discord/src/codex-runner.mjs",
+        "tools/codex-discord/src/config.mjs",
+        "tools/codex-discord/src/index.mjs",
+        "tools/codex-discord/src/output-images.mjs",
+        "tools/codex-discord/src/session-store.mjs",
+        "tools/codex-discord/src/workspace-sync.mjs",
+        "tools/codex-discord/systemd/codex-discord.service",
+        "tools/codex-discord/test/bot.test.mjs",
+        "tools/codex-discord/test/codex-runner.test.mjs",
+        "tools/codex-discord/test/config.test.mjs",
+        "tools/codex-discord/test/output-images.test.mjs",
+        "tools/codex-discord/test/session-store.test.mjs",
+        "tools/codex-discord/test/workspace-sync.test.mjs"
+      ],
+      "scripts": [
+        "start",
+        "test"
+      ],
+      "contracts": [
+        "RESEARCH_WORKSPACE_SYNC_URL",
+        "RESEARCH_WORKSPACE_SYNC_TOKEN",
+        "workspace-write",
+        "on-request"
+      ]
+    },
+    {
+      "id": "agent-skill",
+      "kind": "files",
+      "entry": ".agents/skills/research-workspace-intelligence/SKILL.md",
+      "files": [
+        ".agents/skills/research-workspace-intelligence/SKILL.md",
+        ".agents/skills/research-workspace-intelligence/agents/openai.yaml"
+      ]
+    },
+    {
+      "id": "source-inventory",
+      "kind": "files",
+      "entry": "scripts/report-source-inventory.mjs",
+      "files": [
+        "scripts/report-source-inventory.mjs",
+        ".github/workflows/source-inventory.yml"
+      ]
+    }
+  ],
+  "referenceToolFiles": [
+    "tools/codex-discord/.env.example",
+    "tools/codex-discord/.gitignore",
+    "tools/codex-discord/README.md",
+    "tools/codex-discord/package-lock.json",
+    "tools/codex-discord/package.json",
+    "tools/codex-discord/src/bot.mjs",
+    "tools/codex-discord/src/codex-runner.mjs",
+    "tools/codex-discord/src/config.mjs",
+    "tools/codex-discord/src/index.mjs",
+    "tools/codex-discord/src/output-images.mjs",
+    "tools/codex-discord/src/session-store.mjs",
+    "tools/codex-discord/src/workspace-sync.mjs",
+    "tools/codex-discord/systemd/codex-discord.service",
+    "tools/codex-discord/test/bot.test.mjs",
+    "tools/codex-discord/test/codex-runner.test.mjs",
+    "tools/codex-discord/test/config.test.mjs",
+    "tools/codex-discord/test/output-images.test.mjs",
+    "tools/codex-discord/test/session-store.test.mjs",
+    "tools/codex-discord/test/workspace-sync.test.mjs",
+    "tools/remote/README.md",
+    "tools/remote/bootstrap-flutter.sh",
+    "tools/remote/bridge.sh"
+  ]
+}

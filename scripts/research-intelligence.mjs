@@ -11,6 +11,7 @@ import { loadVerificationState } from "../intelligence/verification-state.mjs";
 import { artifactDriftStatus } from "../intelligence/artifact-drift.mjs";
 import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
 import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
+import { toolSurfaceStatus } from "../intelligence/tool-status.mjs";
 
 const [command, ...args] = process.argv.slice(2);
 const knowledge = loadKnowledge();
@@ -39,6 +40,7 @@ switch (command) {
   case "repository-status": print(repositoryStatusSummary({ knowledge })); break;
   case "claim-evidence-matrix": print(buildClaimEvidenceMatrix(knowledge)); break;
   case "artifact-drift": print(artifactDriftStatus()); break;
+  case "tool-status": print(toolSurfaceStatus()); break;
   case "render-graph": print(renderGraphV2({ knowledge })); break;
   default:
     console.error(`Usage:
@@ -59,6 +61,7 @@ switch (command) {
   node scripts/research-intelligence.mjs repository-status
   node scripts/research-intelligence.mjs claim-evidence-matrix
   node scripts/research-intelligence.mjs artifact-drift
+  node scripts/research-intelligence.mjs tool-status
   node scripts/research-intelligence.mjs render-graph`);
     process.exitCode = 2;
 }

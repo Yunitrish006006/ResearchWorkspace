@@ -31,6 +31,7 @@ node scripts/research-intelligence.mjs context "<task>" research-synthesizer
 node scripts/research-intelligence.mjs search "<query>"
 node scripts/research-intelligence.mjs claim-evidence-matrix
 node scripts/research-intelligence.mjs artifact-drift
+node scripts/research-intelligence.mjs tool-status
 node scripts/research-intelligence.mjs render-graph
 ```
 

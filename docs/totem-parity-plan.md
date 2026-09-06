@@ -1,6 +1,6 @@
 # TotemWorkspace → ResearchWorkspace parity plan
 
-Reference baseline: `Yunitrish006006/TotemWorkspace@74822eb2de6a6bdf31c595b4f148a536a023b105`.
+Reference baseline: `Yunitrish006006/TotemWorkspace@7145982b91bada1817ea8175f9d60076c7f1ffd2`.
 
 The parity rule is architectural rather than lexical: ResearchWorkspace keeps the same subsystem
 boundaries and behavioral contracts while replacing Minecraft/Fabric semantics with research semantics.
@@ -34,3 +34,8 @@ CI fails if a declared implemented/partial capability loses all of its evidence 
 8. Full Flutter ↔ legacy behavior regression suite.
 
 A capability marked `partial` is not considered Totem-parity complete.
+
+## Tool-first freeze
+
+The full tool layer is now a separately audited surface. See `data/tool-surface.json` and `docs/tooling.md`.
+The tool workflow fails on missing CLI commands, MCP tools, Local Bridge routes, Remote Bridge actions, CodexDiscord files/tests, or Totem `tools/` reference drift.

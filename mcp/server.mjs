@@ -12,6 +12,7 @@ import { repositoryStatusSummary } from "../intelligence/repository-status.mjs";
 import { buildClaimEvidenceMatrix } from "../intelligence/claim-evidence-matrix.mjs";
 import { loadVerificationState } from "../intelligence/verification-state.mjs";
 import { artifactDriftStatus } from "../intelligence/artifact-drift.mjs";
+import { toolSurfaceStatus } from "../intelligence/tool-status.mjs";
 
 const SERVER_NAME="research-workspace-intelligence";
 const SERVER_VERSION="0.1.0";
@@ -34,7 +35,8 @@ const TOOLS=Object.freeze([
   {name:"claim_evidence_matrix",description:"Return the current Claim-to-Evidence traceability matrix.",inputSchema:schema({})},
   {name:"artifact_drift",description:"Detect thesis-facing artifact synchronization drift from Git history and dirty files.",inputSchema:schema({})},
   {name:"refresh_index",description:"Rebuild the thesis source/document index and regenerate viewer data.",inputSchema:schema({})},
-  {name:"summary",description:"Return counts and snapshot metadata for ResearchWorkspace.",inputSchema:schema({})}
+  {name:"summary",description:"Return counts and snapshot metadata for ResearchWorkspace.",inputSchema:schema({})},
+  {name:"tool_status",description:"Return completion status for the ResearchWorkspace CLI, MCP, Bridge, CodexDiscord, remote, skill and inventory tool groups.",inputSchema:schema({})}
 ]);
 
 function callTool(name,args={}){
@@ -62,6 +64,7 @@ function callTool(name,args={}){
       return{generatedAt:index.generatedAt,files:index.files,chunks:index.chunks.length,rootPresent:index.rootPresent,graph};
     }
     case"summary":return knowledgeSummary(knowledge);
+    case"tool_status":return toolSurfaceStatus();
     default:throw new Error(`Unknown tool: ${name}`);
   }
 }

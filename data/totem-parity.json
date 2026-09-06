@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "reference": {
     "repository": "Yunitrish006006/TotemWorkspace",
-    "commit": "74822eb2de6a6bdf31c595b4f148a536a023b105"
+    "commit": "7145982b91bada1817ea8175f9d60076c7f1ffd2"
   },
   "rule": "Every production TotemWorkspace subsystem needs a ResearchWorkspace analogue unless explicitly classified domain-specific replacement.",
   "capabilities": [
@@ -159,7 +159,8 @@
         "intelligence/conversation-sync.mjs",
         "intelligence/agent-adapter.mjs",
         "tools/remote/bridge.sh",
-        "scripts/validate-viewer-parity.mjs"
+        "scripts/validate-viewer-parity.mjs",
+        "intelligence/tool-status.mjs"
       ]
     },
     {
@@ -168,7 +169,8 @@
       "research": "Research MCP server",
       "status": "implemented",
       "evidence": [
-        "mcp/server.mjs"
+        "mcp/server.mjs",
+        "intelligence/tool-status.mjs"
       ]
     },
     {
@@ -236,7 +238,9 @@
         "tools/codex-discord/src/bot.mjs",
         "tools/codex-discord/src/workspace-sync.mjs",
         "tools/codex-discord/src/codex-runner.mjs",
-        ".github/workflows/codex-discord.yml"
+        ".github/workflows/codex-discord.yml",
+        "tools/codex-discord/test/codex-runner.test.mjs",
+        "tools/codex-discord/test/workspace-sync.test.mjs"
       ]
     },
     {
@@ -247,7 +251,9 @@
       "evidence": [
         "scripts/validate-all.mjs",
         ".github/workflows/codex-discord.yml",
-        "scripts/validate-viewer-parity.mjs"
+        "scripts/validate-viewer-parity.mjs",
+        "scripts/validate-tool-surface.mjs",
+        ".github/workflows/tools.yml"
       ]
     },
     {
@@ -291,6 +297,19 @@
         "docs/relationship-audit-2026-09-06.md",
         "docs/research-relations.md",
         "scripts/validate-relationship-audit.mjs"
+      ]
+    },
+    {
+      "id": "tool-suite",
+      "totem": "CLI / MCP / Local Bridge / Remote Bridge / CodexDiscord / Agent Skill tool surface",
+      "research": "Audited ResearchWorkspace tool suite",
+      "status": "implemented",
+      "evidence": [
+        "data/tool-surface.json",
+        "intelligence/tool-status.mjs",
+        "scripts/validate-tool-surface.mjs",
+        ".github/workflows/tools.yml",
+        "docs/tooling.md"
       ]
     }
   ]
