@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../live/workspace_live.dart';
 import '../model/graph_data.dart';
 import '../model/graph_scene.dart';
+import 'activity_location.dart';
 import 'collapsible_message.dart';
 import 'floating_panel.dart';
 
@@ -31,6 +32,7 @@ class _GraphViewState extends State<GraphView> {
   VerificationState? _verification;
   ArtifactDrift? _artifactDrift;
   ActivityEvent? _activity;
+  final List<ActivityEvent> _activityLog = <ActivityEvent>[];
   ReplayTimeline? _timeline;
   ReplayFrame? _replayFrame;
   ViewerSettings _settings = const ViewerSettings(
@@ -45,7 +47,9 @@ class _GraphViewState extends State<GraphView> {
   bool _submitting = false;
   final TextEditingController _promptController = TextEditingController();
   FloatingPanelDock _detailsDock = FloatingPanelDock.topRight;
+  FloatingPanelDock _activityDock = FloatingPanelDock.topCenter;
   bool _detailsCollapsed = false;
+  bool _activityCollapsed = true;
 
   GraphScene get _scene => buildGraphScene(_data, expanded: _expanded);
 
@@ -109,7 +113,17 @@ class _GraphViewState extends State<GraphView> {
         _change = results[2] as ResearchChange;
         _verification = results[3] as VerificationState;
         _artifactDrift = results[4] as ArtifactDrift;
-        if (batch.events.isNotEmpty) _activity = batch.events.last;
+        if (batch.events.isNotEmpty) {
+          final known = _activityLog.map((event) => event.sequence).toSet();
+          for (final event in batch.events) {
+            if (!known.contains(event.sequence)) _activityLog.add(event);
+          }
+          _activityLog.sort((a, b) => a.sequence.compareTo(b.sequence));
+          if (_activityLog.length > 80) {
+            _activityLog.removeRange(0, _activityLog.length - 80);
+          }
+          _activity = _activityLog.last;
+        }
         _timeline = results[6] as ReplayTimeline;
         _settings = results[7] as ViewerSettings;
         _adapter = results[8] as AdapterStatus;
@@ -334,6 +348,27 @@ class _GraphViewState extends State<GraphView> {
               error: _liveError,
             ),
           ),
+        if (_client != null && _settings.agentActivityEnabled && _activityLog.isNotEmpty)
+          FloatingPanel(
+            title: 'Research Agent Activity',
+            icon: Icons.auto_awesome_outlined,
+            dock: _activityDock,
+            collapsed: _activityCollapsed,
+            width: math.min(430, mediaWidth - 24),
+            expandedHeight: 320,
+            onCollapsedChanged: (value) => setState(() => _activityCollapsed = value),
+            onDockChanged: (value) => setState(() => _activityDock = value),
+            child: ListView(
+              padding: const EdgeInsets.all(10),
+              children: [
+                for (final event in _activityLog.reversed.take(20))
+                  _ActivityCard(
+                    event: event,
+                    onFocus: event.focusId == null ? null : () => _activate(event.focusId!),
+                  ),
+              ],
+            ),
+          ),
         if (selected != null)
           FloatingPanel(
             title: selected.label,
@@ -443,6 +478,48 @@ class _InfoItem extends StatelessWidget {
     ),
     child: Text(text, style: const TextStyle(fontSize: 12, color: Color(0xFFD7E5F4))),
   );
+}
+
+class _ActivityCard extends StatelessWidget {
+  const _ActivityCard({required this.event, this.onFocus});
+  final ActivityEvent event;
+  final VoidCallback? onFocus;
+
+  @override
+  Widget build(BuildContext context) {
+    final location = ActivitySourceLocation.fromEvent(event);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0B1B29),
+        border: Border.all(color: const Color(0xFF29445A)),
+        borderRadius: BorderRadius.circular(9),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(child: Text(event.type.toUpperCase(), style: const TextStyle(color: Color(0xFF67E8F9), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7))),
+            Text('#' + event.sequence.toString(), style: const TextStyle(color: Color(0xFF6B8199), fontSize: 9)),
+          ]),
+          const SizedBox(height: 5),
+          CollapsibleMessage(text: event.summary, style: const TextStyle(color: Color(0xFFD7E5F4), fontSize: 11, height: 1.35)),
+          if (event.detail != null && event.detail!.trim().isNotEmpty) ...[
+            const SizedBox(height: 5),
+            CollapsibleMessage(text: event.detail!, style: const TextStyle(color: Color(0xFF9FB4CA), fontFamily: 'monospace', fontSize: 10, height: 1.3)),
+          ],
+          if (location != null) ...[
+            const SizedBox(height: 7),
+            ActivitySourceLocationCard(location: location, onTap: onFocus ?? () {}),
+          ] else if (onFocus != null) ...[
+            const SizedBox(height: 5),
+            TextButton.icon(onPressed: onFocus, icon: const Icon(Icons.center_focus_strong, size: 14), label: Text('聚焦 ' + (event.focusId ?? 'graph'))),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _LiveStrip extends StatelessWidget {

@@ -152,13 +152,34 @@ class VerificationState {
 }
 
 class ActivityEvent {
-  const ActivityEvent({required this.sequence, required this.type, required this.summary, this.topicId, this.claimId, this.planTopicId});
+  const ActivityEvent({
+    required this.sequence,
+    required this.type,
+    required this.summary,
+    this.timestamp,
+    this.source,
+    this.topicId,
+    this.claimId,
+    this.planTopicId,
+    this.repository,
+    this.file,
+    this.taskId,
+    this.status,
+    this.detail,
+  });
   final int sequence;
   final String type;
   final String summary;
+  final String? timestamp;
+  final String? source;
   final String? topicId;
   final String? claimId;
   final String? planTopicId;
+  final String? repository;
+  final String? file;
+  final String? taskId;
+  final String? status;
+  final String? detail;
   String? get focusId => claimId ?? topicId ?? planTopicId;
 
   factory ActivityEvent.fromJson(Map<String, dynamic> json) {
@@ -168,9 +189,16 @@ class ActivityEvent {
       sequence: (json['sequence'] as num?)?.toInt() ?? 0,
       type: json['type'] as String? ?? 'activity',
       summary: json['summary'] as String? ?? '',
+      timestamp: json['timestamp'] as String? ?? json['at'] as String?,
+      source: json['source'] as String?,
       topicId: json['topicId'] as String?,
       claimId: json['claimId'] as String?,
       planTopicId: topics.isEmpty ? null : topics.first,
+      repository: json['repository'] as String?,
+      file: json['file'] as String?,
+      taskId: json['taskId'] as String?,
+      status: json['status'] as String?,
+      detail: json['detail'] as String?,
     );
   }
 }
