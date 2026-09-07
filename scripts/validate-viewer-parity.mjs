@@ -37,7 +37,7 @@ assert.ok(flutter.includes("_data = results[0] as GraphData"));
 for(const token of ["file_edit","symbol_edit","keptOpen","onHoverChanged","onKeepOpenChanged","semanticTargets","matches"]){
   assert.ok(activityLocation.includes(token),"Activity Source Location parity missing "+token);
 }
-for(const token of ["_hoveredActivityLocation","_keptOpenActivityLocation","_showActivitySourceLocation","_toggleKeptOpenActivityLocation","SingleTickerProviderStateMixin","BrowserContextMenu","kSecondaryMouseButton","LogicalKeyboardKey","activityPulse"]){
+for(const token of ["_hoveredActivityLocation","_keptOpenActivityLocation","_showActivitySourceLocation","_toggleKeptOpenActivityLocation","_transientActivityExpanded","_visibleExpanded","_syncTransientActivityExpansion","_liveActivityFocus","SingleTickerProviderStateMixin","BrowserContextMenu","kSecondaryMouseButton","LogicalKeyboardKey","activityPulse"]){
   assert.ok(flutter.includes(token),"Flutter activity-location host behavior missing "+token);
 }
 

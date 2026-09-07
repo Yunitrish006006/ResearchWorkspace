@@ -24,6 +24,7 @@ class _GraphViewState extends State<GraphView>
   late GraphData _data;
   Camera3d _camera = const Camera3d();
   final Set<String> _expanded = {};
+  final Set<String> _transientActivityExpanded = {};
   final Set<String> _enabledFilters = edgeFilterKeys.toSet();
   String? _selectedId;
   Offset? _lastFocal;
@@ -69,9 +70,14 @@ class _GraphViewState extends State<GraphView>
   ActivitySourceLocation? _hoveredActivityLocation;
   ActivitySourceLocation? _keptOpenActivityLocation;
 
+  Set<String> get _visibleExpanded => {
+    ..._expanded,
+    ..._transientActivityExpanded,
+  };
+
   GraphScene get _scene => buildGraphScene(
     _data,
-    expanded: _expanded,
+    expanded: _visibleExpanded,
     enabledFilters: _enabledFilters,
   );
   bool get _conversationAvailable {
@@ -167,6 +173,7 @@ class _GraphViewState extends State<GraphView>
             _activityLog.removeRange(0, _activityLog.length - 80);
           }
           _activity = _activityLog.last;
+          _syncTransientActivityExpansion(_liveActivityFocus);
         }
         _timeline = results[6] as ReplayTimeline;
         _settings = results[7] as ViewerSettings;
@@ -309,6 +316,62 @@ class _GraphViewState extends State<GraphView>
     }
   }
 
+  void _syncTransientActivityExpansion(String? targetId) {
+    _transientActivityExpanded.clear();
+    if (targetId == null || targetId.isEmpty) return;
+
+    GraphClaim? claim;
+    GraphSourceArea? area;
+    GraphArtifact? artifact;
+
+    for (final candidate in _data.claims) {
+      if (candidate.id == targetId) {
+        claim = candidate;
+        break;
+      }
+    }
+    for (final candidate in _data.sourceAreas) {
+      if (candidate.id == targetId) {
+        area = candidate;
+        break;
+      }
+    }
+    for (final candidate in _data.artifacts) {
+      if (candidate.id == targetId) {
+        artifact = candidate;
+        break;
+      }
+    }
+
+    if (artifact != null) {
+      for (final candidate in _data.sourceAreas) {
+        if (candidate.id == artifact.areaId) {
+          area = candidate;
+          break;
+        }
+      }
+      _transientActivityExpanded.add(artifact.areaId);
+    }
+
+    if (area != null) {
+      _transientActivityExpanded.add(area.claimId);
+      for (final candidate in _data.claims) {
+        if (candidate.id == area.claimId) {
+          claim = candidate;
+          break;
+        }
+      }
+    }
+
+    if (claim != null) {
+      _transientActivityExpanded.add(claim.ownerId);
+    }
+  }
+
+  String? get _liveActivityFocus =>
+      (_keptOpenActivityLocation ?? _hoveredActivityLocation)?.semanticTarget ??
+      _activity?.focusId;
+
   KeyEventResult _handleKey(GraphScene scene, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final nodes = scene.nodes;
@@ -355,9 +418,17 @@ class _GraphViewState extends State<GraphView>
   void _setHoveredActivityLocation(ActivitySourceLocation location, bool hovering) {
     final same = location.matches(_hoveredActivityLocation);
     if (hovering) {
-      if (!same) setState(() => _hoveredActivityLocation = location);
+      if (!same) {
+        setState(() {
+          _hoveredActivityLocation = location;
+          _syncTransientActivityExpansion(_liveActivityFocus);
+        });
+      }
     } else if (same) {
-      setState(() => _hoveredActivityLocation = null);
+      setState(() {
+        _hoveredActivityLocation = null;
+        _syncTransientActivityExpansion(_liveActivityFocus);
+      });
     }
   }
 
@@ -366,6 +437,7 @@ class _GraphViewState extends State<GraphView>
       _keptOpenActivityLocation = location.matches(_keptOpenActivityLocation)
           ? null
           : location;
+      _syncTransientActivityExpansion(_liveActivityFocus);
     });
   }
 
@@ -463,7 +535,7 @@ class _GraphViewState extends State<GraphView>
                       runningVerification: _verification?.running ?? const {},
                       passedVerification: _verification?.passed ?? const {},
                       failedVerification: _verification?.failed ?? const {},
-                      activityNodeId: (_keptOpenActivityLocation ?? _hoveredActivityLocation)?.semanticTarget ?? _activity?.focusId,
+                      activityNodeId: _liveActivityFocus,
                       activityPulse: _activityPulse,
                       historicalEntityIds: history,
                     ),
@@ -642,7 +714,7 @@ class _GraphViewState extends State<GraphView>
                 const SizedBox(height: 12),
                 Text(
                   selected.kind == 'topic' || selected.kind == 'claim' || selected.kind == 'source-area'
-                    ? (_expanded.contains(selected.id) ? 'Expanded semantic cluster' : 'Tap again to expand semantic cluster')
+                    ? (_visibleExpanded.contains(selected.id) ? 'Expanded semantic cluster' : 'Tap again to expand semantic cluster')
                     : 'Evidence-level node',
                   style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11),
                 ),
