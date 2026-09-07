@@ -46,4 +46,32 @@ void main() {
     expect(filtered.edges.any((edge) => edge.type == 'validated-by'), isTrue);
     expect(filtered.edges.any((edge) => edge.type == 'contains'), isTrue);
   });
+
+  test('cross-topic claim relations bias semantic placement toward the related topic', () {
+    const data = GraphData(
+      snapshotDate: 'test',
+      root: GraphRoot(id: 'thesis', name: 'Thesis', summary: ''),
+      topics: [
+        GraphTopic(id: 't1', name: 'Topic 1', summary: '', rankHint: 1),
+        GraphTopic(id: 't2', name: 'Topic 2', summary: '', rankHint: 2),
+      ],
+      claims: [
+        GraphClaim(id: 'c1', ownerId: 't1', title: 'Claim 1', summary: '', status: 'SUPPORTED'),
+        GraphClaim(id: 'c2', ownerId: 't2', title: 'Claim 2', summary: '', status: 'SUPPORTED'),
+      ],
+      studies: [],
+      evidence: [],
+      reviews: [],
+      sourceAreas: [],
+      artifacts: [],
+      relations: [
+        GraphRelation(id: 'rel', from: 'c1', to: 'c2', type: 'limits', label: 'boundary'),
+      ],
+    );
+    final scene = buildGraphScene(data, expanded: {'t1'});
+    final owner = scene.byId['t1']!.position;
+    final claim = scene.byId['c1']!.position;
+    final target = scene.byId['t2']!.position;
+    expect((claim - owner).dot(target - owner), greaterThan(0));
+  });
 }

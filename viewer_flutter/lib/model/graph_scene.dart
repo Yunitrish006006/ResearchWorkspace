@@ -20,9 +20,17 @@ const edgeFilterLabels = <String, String>{
 
 class Vec3 {
   const Vec3(this.x, this.y, this.z);
+  static const zero = Vec3(0, 0, 0);
   final double x;
   final double y;
   final double z;
+
+  Vec3 operator +(Vec3 other) => Vec3(x + other.x, y + other.y, z + other.z);
+  Vec3 operator -(Vec3 other) => Vec3(x - other.x, y - other.y, z - other.z);
+  Vec3 operator *(double value) => Vec3(x * value, y * value, z * value);
+  double get length => math.sqrt(x * x + y * y + z * z);
+  Vec3 get normalized => length < .000001 ? zero : this * (1 / length);
+  double dot(Vec3 other) => x * other.x + y * other.y + z * other.z;
 }
 
 class ProjectedPoint {
@@ -141,6 +149,97 @@ Vec3 _scatter(Vec3 parent, String id, String kind, double radius) {
 
 VisualNode? _firstNode(Iterable<VisualNode> nodes) => nodes.isEmpty ? null : nodes.first;
 
+class _RelationHint {
+  const _RelationHint(this.targetTopicId, this.weight);
+  final String targetTopicId;
+  final double weight;
+}
+
+String? _topicForEntity(GraphData data, String id) {
+  if (data.topics.any((x) => x.id == id)) return id;
+  for (final claim in data.claims) {
+    if (claim.id == id) return claim.ownerId;
+  }
+  for (final study in data.studies) {
+    if (study.id == id) {
+      for (final claim in data.claims) {
+        if (claim.id == study.claimId) return claim.ownerId;
+      }
+    }
+  }
+  for (final evidence in data.evidence) {
+    if (evidence.id == id) {
+      for (final claim in data.claims) {
+        if (claim.id == evidence.claimId) return claim.ownerId;
+      }
+    }
+  }
+  for (final review in data.reviews) {
+    if (review.id == id) {
+      for (final claim in data.claims) {
+        if (claim.id == review.claimId) return claim.ownerId;
+      }
+    }
+  }
+  for (final area in data.sourceAreas) {
+    if (area.id == id) {
+      for (final claim in data.claims) {
+        if (claim.id == area.claimId) return claim.ownerId;
+      }
+    }
+  }
+  return null;
+}
+
+double _relationWeight(String type) => switch (type) {
+  'grounded-in' => 1.45,
+  'supports' => 1.30,
+  'validated-by' => 1.20,
+  'uses-method' => 1.05,
+  'limits' => .90,
+  _ => .70,
+};
+
+List<_RelationHint> _claimRelationHints(GraphData data, GraphClaim claim) {
+  final hints = <_RelationHint>[];
+  for (final relation in data.relations) {
+    String? other;
+    if (relation.from == claim.id) other = relation.to;
+    if (relation.to == claim.id) other = relation.from;
+    if (other == null) continue;
+    final topicId = _topicForEntity(data, other);
+    if (topicId == null || topicId == claim.ownerId) continue;
+    hints.add(_RelationHint(topicId, _relationWeight(relation.type)));
+  }
+  return hints;
+}
+
+Vec3 _relationAwareScatter(
+  Vec3 parent,
+  String id,
+  String kind,
+  double radius,
+  Map<String, Vec3> topicAnchors,
+  List<_RelationHint> hints,
+) {
+  final base = _scatter(parent, id, kind, radius);
+  if (hints.isEmpty) return base;
+
+  var target = Vec3.zero;
+  var totalWeight = 0.0;
+  for (final hint in hints) {
+    final anchor = topicAnchors[hint.targetTopicId];
+    if (anchor == null) continue;
+    target = target + (anchor - parent).normalized * hint.weight;
+    totalWeight += hint.weight;
+  }
+  if (totalWeight <= 0 || target.length < .000001) return base;
+
+  final baseOffset = base - parent;
+  final desired = target.normalized * (radius * .82);
+  return parent + baseOffset * .55 + desired * .45;
+}
+
 GraphScene buildGraphScene(
   GraphData data, {
   Set<String> expanded = const {},
@@ -168,6 +267,11 @@ GraphScene buildGraphScene(
     edges.add(VisualEdge(id: 'contains:' + topic.id, from: data.root.id, to: topic.id, type: 'contains', label: 'contains'));
   }
 
+  final topicAnchors = {
+    for (final node in nodes)
+      if (node.kind == 'topic') node.id: node.position,
+  };
+
   for (final topic in data.topics) {
     if (!expanded.contains(topic.id)) continue;
     final parent = nodes.firstWhere((x) => x.id == topic.id);
@@ -180,7 +284,14 @@ GraphScene buildGraphScene(
         kind: 'claim',
         label: claim.title,
         summary: claim.summary,
-        position: _scatter(parent.position, claim.id, 'claim', radius),
+        position: _relationAwareScatter(
+          parent.position,
+          claim.id,
+          'claim',
+          radius,
+          topicAnchors,
+          _claimRelationHints(data, claim),
+        ),
         ownerId: topic.id,
         status: claim.status,
       ));
