@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../live/workspace_live.dart';
 import '../model/graph_data.dart';
 import '../model/graph_scene.dart';
@@ -17,7 +19,8 @@ class GraphView extends StatefulWidget {
   State<GraphView> createState() => _GraphViewState();
 }
 
-class _GraphViewState extends State<GraphView> {
+class _GraphViewState extends State<GraphView>
+    with SingleTickerProviderStateMixin {
   late GraphData _data;
   Camera3d _camera = const Camera3d();
   final Set<String> _expanded = {};
@@ -25,6 +28,8 @@ class _GraphViewState extends State<GraphView> {
   String? _selectedId;
   Offset? _lastFocal;
   double _gestureZoom = 1.02;
+  late final AnimationController _activityPulse;
+  bool _restoreBrowserContextMenu = false;
 
   WorkspaceLiveClient? _client;
   Timer? _pollTimer;
@@ -78,6 +83,14 @@ class _GraphViewState extends State<GraphView> {
   void initState() {
     super.initState();
     _data = widget.data;
+    if (kIsWeb && BrowserContextMenu.enabled) {
+      _restoreBrowserContextMenu = true;
+      unawaited(BrowserContextMenu.disableContextMenu());
+    }
+    _activityPulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
     _probe();
   }
 
@@ -94,6 +107,10 @@ class _GraphViewState extends State<GraphView> {
     _draftDebounce?.cancel();
     _client?.close();
     _promptController.dispose();
+    if (kIsWeb && _restoreBrowserContextMenu) {
+      unawaited(BrowserContextMenu.enableContextMenu());
+    }
+    _activityPulse.dispose();
     super.dispose();
   }
 
@@ -292,6 +309,46 @@ class _GraphViewState extends State<GraphView> {
     }
   }
 
+  KeyEventResult _handleKey(GraphScene scene, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
+    final nodes = scene.nodes;
+    if (nodes.isEmpty) return KeyEventResult.ignored;
+
+    if (event.logicalKey == LogicalKeyboardKey.home) {
+      setState(() => _selectedId = _data.root.id);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.end) {
+      setState(() => _selectedId = nodes.last.id);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      setState(() => _selectedId = null);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.enter ||
+        event.logicalKey == LogicalKeyboardKey.space) {
+      final id = _selectedId;
+      if (id != null) _activate(id);
+      return KeyEventResult.handled;
+    }
+    if (event.logicalKey == LogicalKeyboardKey.arrowRight ||
+        event.logicalKey == LogicalKeyboardKey.arrowDown ||
+        event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+        event.logicalKey == LogicalKeyboardKey.arrowUp) {
+      final currentIndex = nodes.indexWhere((node) => node.id == _selectedId);
+      final forward =
+          event.logicalKey == LogicalKeyboardKey.arrowRight ||
+          event.logicalKey == LogicalKeyboardKey.arrowDown;
+      final next = currentIndex < 0
+          ? 0
+          : (currentIndex + (forward ? 1 : -1) + nodes.length) % nodes.length;
+      setState(() => _selectedId = nodes[next].id);
+      return KeyEventResult.handled;
+    }
+    return KeyEventResult.ignored;
+  }
+
   ActivitySourceLocation? _activityLocationFor(ActivityEvent event) =>
       ActivitySourceLocation.fromEvent(event);
 
@@ -344,16 +401,26 @@ class _GraphViewState extends State<GraphView> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final size = Size(constraints.maxWidth, constraints.maxHeight);
-              return Listener(
-                onPointerSignal: (event) {
-                  if (event is PointerScrollEvent) {
+              return Focus(
+                autofocus: true,
+                onKeyEvent: (_, event) => _handleKey(scene, event),
+                child: Listener(
+                  onPointerSignal: (event) {
+                    if (event is PointerScrollEvent) {
+                      setState(() => _camera = _camera.copyWith(
+                        zoom: (_camera.zoom * math.exp(-event.scrollDelta.dy * .001)).clamp(.32, 3.2).toDouble(),
+                      ));
+                    }
+                  },
+                  onPointerMove: (event) {
+                    if ((event.buttons & kSecondaryMouseButton) == 0) return;
                     setState(() => _camera = _camera.copyWith(
-                      zoom: (_camera.zoom * math.exp(-event.scrollDelta.dy * .001)).clamp(.32, 3.2).toDouble(),
+                      panX: _camera.panX + event.delta.dx,
+                      panY: _camera.panY + event.delta.dy,
                     ));
-                  }
-                },
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
+                  },
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
                   onScaleStart: (details) {
                     _lastFocal = details.focalPoint;
                     _gestureZoom = _camera.zoom;
@@ -380,7 +447,11 @@ class _GraphViewState extends State<GraphView> {
                   onScaleEnd: (_) => _lastFocal = null,
                   onTapUp: (details) {
                     final id = _hitTest(details.localPosition, size);
-                    if (id != null) _activate(id);
+                    if (id == null) {
+                      setState(() => _selectedId = null);
+                    } else {
+                      _activate(id);
+                    }
                   },
                   child: CustomPaint(
                     painter: _GraphPainter(
@@ -393,11 +464,13 @@ class _GraphViewState extends State<GraphView> {
                       passedVerification: _verification?.passed ?? const {},
                       failedVerification: _verification?.failed ?? const {},
                       activityNodeId: (_keptOpenActivityLocation ?? _hoveredActivityLocation)?.semanticTarget ?? _activity?.focusId,
+                      activityPulse: _activityPulse,
                       historicalEntityIds: history,
                     ),
                     size: Size.infinite,
                   ),
                 ),
+              ),
               );
             },
           ),
@@ -615,7 +688,7 @@ class _GraphViewState extends State<GraphView> {
             left: 12,
             bottom: 12,
             child: _Panel(
-              child: const Text('一指拖曳旋轉 · 兩指縮放＋平移 · 滾輪縮放 · 點 Topic / Claim 逐層展開', style: TextStyle(fontSize: 11, color: Color(0xFFA9BDD0))),
+              child: const Text('左鍵/一指拖曳旋轉 · 右鍵拖曳平移 · 兩指縮放＋平移 · 滾輪縮放 · 方向鍵選取 · Enter 展開', style: TextStyle(fontSize: 11, color: Color(0xFFA9BDD0))),
             ),
           ),
       ],
@@ -922,8 +995,9 @@ class _GraphPainter extends CustomPainter {
     required this.passedVerification,
     required this.failedVerification,
     required this.activityNodeId,
+    required this.activityPulse,
     required this.historicalEntityIds,
-  });
+  }) : super(repaint: activityPulse);
   final GraphScene scene;
   final Camera3d camera;
   final String? selectedId;
@@ -933,6 +1007,7 @@ class _GraphPainter extends CustomPainter {
   final Set<String> passedVerification;
   final Set<String> failedVerification;
   final String? activityNodeId;
+  final Animation<double> activityPulse;
   final Set<String> historicalEntityIds;
 
   @override
@@ -999,7 +1074,10 @@ class _GraphPainter extends CustomPainter {
       if (changedEntityIds.contains(node.id)) _ring(canvas, p.offset, radius + 11, const Color(0xFFFBBF24), 2.4);
       final vStatus = failedVerification.contains(node.id) ? 'failed' : runningVerification.contains(node.id) ? 'running' : passedVerification.contains(node.id) ? 'passed' : null;
       if (vStatus != null) _ring(canvas, p.offset, radius + 8, _verificationColor(vStatus), 2.5);
-      if (activityNodeId == node.id) _ring(canvas, p.offset, radius + 17, const Color(0xFF67E8F9), 2.4);
+      if (activityNodeId == node.id) {
+        final pulse = (math.sin(activityPulse.value * math.pi * 2) + 1) * .5;
+        _ring(canvas, p.offset, radius + 12 + pulse * 8, const Color(0xFF67E8F9), 2.4);
+      }
       if (selected) _ring(canvas, p.offset, radius + 7, Colors.white, 2.4);
 
       canvas.drawCircle(p.offset, radius, Paint()..color = color);
