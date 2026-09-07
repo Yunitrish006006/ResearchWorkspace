@@ -119,7 +119,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
       _client = client;
       _probing = false;
     });
-    if (client == null) return;
+    if (client == null) {
+      return;
+    }
     await _poll();
     _workspacePoller = Timer.periodic(
       const Duration(seconds: 10),
@@ -165,7 +167,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
 
   Future<void> _poll() async {
     final client = _client;
-    if (client == null) return;
+    if (client == null) {
+      return;
+    }
     try {
       final results = await Future.wait<Object>([
         client.graphData(),
@@ -178,7 +182,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         client.viewerSettings(),
         client.adapterStatus(),
       ]);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _data = results[0] as GraphData;
         _repoStatus = results[1] as RepositoryStatus;
@@ -206,7 +212,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
 
   Future<void> _pollWorkspace() async {
     final client = _client;
-    if (client == null || !_activePolls.add('workspace')) return;
+    if (client == null || !_activePolls.add('workspace')) {
+      return;
+    }
     try {
       final results = await Future.wait<Object>([
         client.graphData(),
@@ -215,7 +223,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         client.artifactDrift(),
         client.viewerSettings(),
       ]);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _data = results[0] as GraphData;
         _repoStatus = results[1] as RepositoryStatus;
@@ -228,10 +238,12 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         }
       });
     } catch (error) {
-      if (mounted) setState(() {
-        _liveError = error.toString();
-        _liveErrorSource = 'workspace';
-      });
+      if (mounted) {
+        setState(() {
+          _liveError = error.toString();
+          _liveErrorSource = 'workspace';
+        });
+      }
     } finally {
       _activePolls.remove('workspace');
     }
@@ -241,10 +253,14 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
     final client = _client;
     if (client == null ||
         !_settings.agentActivityEnabled ||
-        !_activePolls.add('activity')) return;
+        !_activePolls.add('activity')) {
+      return;
+    }
     try {
       final batch = await client.activity(after: _activitySequence);
-      if (batch.events.isEmpty) return;
+      if (batch.events.isEmpty) {
+        return;
+      }
       GraphData? graph;
       ResearchChange? change;
       ArtifactDrift? drift;
@@ -268,22 +284,32 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
           // Activity remains authoritative even if the refresh layer is briefly unavailable.
         }
       }
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _mergeActivity(batch);
-        if (graph != null) _data = graph!;
-        if (change != null) _change = change;
-        if (drift != null) _artifactDrift = drift;
+        if (graph != null) {
+          _data = graph;
+        }
+        if (change != null) {
+          _change = change;
+        }
+        if (drift != null) {
+          _artifactDrift = drift;
+        }
         if (_liveErrorSource == 'activity') {
           _liveError = null;
           _liveErrorSource = null;
         }
       });
     } catch (error) {
-      if (mounted) setState(() {
-        _liveError = error.toString();
-        _liveErrorSource = 'activity';
-      });
+      if (mounted) {
+        setState(() {
+          _liveError = error.toString();
+          _liveErrorSource = 'activity';
+        });
+      }
     } finally {
       _activePolls.remove('activity');
     }
@@ -291,10 +317,14 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
 
   Future<void> _pollVerification() async {
     final client = _client;
-    if (client == null || !_activePolls.add('verification')) return;
+    if (client == null || !_activePolls.add('verification')) {
+      return;
+    }
     try {
       final verification = await client.verificationState();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _verification = verification;
         if (_liveErrorSource == 'verification') {
@@ -303,10 +333,12 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         }
       });
     } catch (error) {
-      if (mounted) setState(() {
-        _liveError = error.toString();
-        _liveErrorSource = 'verification';
-      });
+      if (mounted) {
+        setState(() {
+          _liveError = error.toString();
+          _liveErrorSource = 'verification';
+        });
+      }
     } finally {
       _activePolls.remove('verification');
     }
@@ -314,10 +346,14 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
 
   Future<void> _pollAdapter() async {
     final client = _client;
-    if (client == null || !_activePolls.add('adapter')) return;
+    if (client == null || !_activePolls.add('adapter')) {
+      return;
+    }
     try {
       final adapter = await client.adapterStatus();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _adapter = adapter;
         _orchestration =
@@ -330,10 +366,12 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         }
       });
     } catch (error) {
-      if (mounted) setState(() {
-        _liveError = error.toString();
-        _liveErrorSource = 'adapter';
-      });
+      if (mounted) {
+        setState(() {
+          _liveError = error.toString();
+          _liveErrorSource = 'adapter';
+        });
+      }
     } finally {
       _activePolls.remove('adapter');
     }
@@ -343,13 +381,18 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
     final client = _client;
     if (client == null ||
         !_settings.replayEnabled ||
-        !_activePolls.add('replay')) return;
+        !_activePolls.add('replay')) {
+      return;
+    }
     try {
       final timeline = await client.replayTimeline();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _timeline = timeline;
-        if (_replayFrame != null && _replayFrame!.sequence >= timeline.latest) {
+        final frame = _replayFrame;
+        if (frame != null && frame.sequence >= timeline.latest) {
           _replayFrame = null;
         }
         if (_liveErrorSource == 'replay') {
@@ -358,10 +401,12 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         }
       });
     } catch (error) {
-      if (mounted) setState(() {
-        _liveError = error.toString();
-        _liveErrorSource = 'replay';
-      });
+      if (mounted) {
+        setState(() {
+          _liveError = error.toString();
+          _liveErrorSource = 'replay';
+        });
+      }
     } finally {
       _activePolls.remove('replay');
     }
@@ -372,14 +417,20 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
     if (client == null ||
         !_conversationAvailable ||
         !_settings.promptEnabled ||
-        !_activePolls.add('conversation')) return;
+        !_activePolls.add('conversation')) {
+      return;
+    }
     try {
       final snapshot = await client.conversation(after: _conversationRevision);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         final known = _conversation.map((entry) => entry.revision).toSet();
         for (final entry in snapshot.entries) {
-          if (!known.contains(entry.revision)) _conversation.add(entry);
+          if (!known.contains(entry.revision)) {
+            _conversation.add(entry);
+          }
         }
         _conversation.sort((a, b) => a.revision.compareTo(b.revision));
         if (_conversation.length > 120) {
@@ -408,7 +459,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
 
   void _scheduleDraftSync(String text) {
     final client = _client;
-    if (client == null || !_conversationAvailable) return;
+    if (client == null || !_conversationAvailable) {
+      return;
+    }
     _draftDebounce?.cancel();
     _draftDebounce = Timer(const Duration(milliseconds: 450), () async {
       try {
@@ -419,14 +472,20 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
 
   Future<void> _togglePrompt() async {
     final client = _client;
-    if (client == null) return;
+    if (client == null) {
+      return;
+    }
     try {
       final next = await client.updateViewerSettings(
         _settings.copyWith(promptEnabled: !_settings.promptEnabled),
       );
-      if (mounted) setState(() => _settings = next);
+      if (mounted) {
+        setState(() => _settings = next);
+      }
     } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
+      if (mounted) {
+        setState(() => _liveError = error.toString());
+      }
     }
   }
 
@@ -445,7 +504,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         prompt,
         clientId: _conversationClientId,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         if (!_activity.any((event) => event.sequence == result.event.sequence)) {
           _activity.add(result.event);
@@ -463,9 +524,13 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         _pollReplayTimeline(),
       ]);
     } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
+      if (mounted) {
+        setState(() => _liveError = error.toString());
+      }
     } finally {
-      if (mounted) setState(() => _submitting = false);
+      if (mounted) {
+        setState(() => _submitting = false);
+      }
     }
   }
 
@@ -481,7 +546,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
       final frame = await client.replayFrame(sequence);
       if (mounted) setState(() => _replayFrame = frame);
     } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
+      if (mounted) {
+        setState(() => _liveError = error.toString());
+      }
     }
   }
 
