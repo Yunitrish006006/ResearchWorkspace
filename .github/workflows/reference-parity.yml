@@ -1,12 +1,9 @@
 name: Check Totem Reference Drift
 on:
   push:
-    paths:
-      - "data/totem-parity.json"
-      - "data/reference-surface-map.json"
-      - "scripts/check-totem-reference.mjs"
-      - "scripts/validate-reference-surface.mjs"
-      - ".github/workflows/reference-parity.yml"
+    branches: [main]
+  pull_request:
+  
   schedule:
     - cron: "17 3 * * *"
   workflow_dispatch:
@@ -28,3 +25,7 @@ jobs:
         env:
           TOTEM_REFERENCE_ROOT: ${{ github.workspace }}/.reference/TotemWorkspace
         run: node scripts/validate-reference-surface.mjs
+      - name: Verify reference behavioral contracts
+        env:
+          TOTEM_REFERENCE_ROOT: ${{ github.workspace }}/.reference/TotemWorkspace
+        run: node scripts/validate-behavior-parity.mjs

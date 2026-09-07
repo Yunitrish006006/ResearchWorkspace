@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "reference": {
+    "repository": "Yunitrish006006/TotemWorkspace",
+    "commit": "7145982b91bada1817ea8175f9d60076c7f1ffd2"
+  },
+  "contracts": [
+    {
+      "id": "flutter-host-owns-live-transport",
+      "referencePath": "viewer_flutter/lib/widgets/workspace_graph_host.dart",
+      "researchPath": "viewer_flutter/lib/widgets/workspace_graph_host.dart",
+      "referenceTokens": [
+        "LocalWorkspaceClient",
+        "_pollActivity",
+        "_pollVerification",
+        "_pollAdapter",
+        "_pollReplayTimeline",
+        "_pollConversation",
+        "GraphView("
+      ],
+      "researchTokens": [
+        "WorkspaceLiveClient",
+        "_poll()",
+        "_pollConversation",
+        "_selectReplay",
+        "_submitPrompt",
+        "GraphView("
+      ],
+      "researchForbidden": [
+        "class _GraphPainter"
+      ]
+    },
+    {
+      "id": "flutter-graph-is-interactive-renderer",
+      "referencePath": "viewer_flutter/lib/widgets/graph_view.dart",
+      "researchPath": "viewer_flutter/lib/widgets/graph_view.dart",
+      "referenceTokens": [
+        "edgeFilterKeys",
+        "SingleTickerProviderStateMixin",
+        "BrowserContextMenu",
+        "kSecondaryMouseButton",
+        "LogicalKeyboardKey",
+        "activityPulse"
+      ],
+      "researchTokens": [
+        "edgeFilterKeys",
+        "SingleTickerProviderStateMixin",
+        "BrowserContextMenu",
+        "kSecondaryMouseButton",
+        "LogicalKeyboardKey",
+        "activityPulse",
+        "Visible relationships",
+        "_relationAwareScatter"
+      ],
+      "researchForbidden": [
+        "WorkspaceLiveClient",
+        "Timer.periodic"
+      ]
+    },
+    {
+      "id": "activity-source-location-is-transient-and-pinnable",
+      "referencePath": "viewer_flutter/lib/widgets/activity_location.dart",
+      "researchPath": "viewer_flutter/lib/widgets/activity_location.dart",
+      "referenceTokens": [
+        "keptOpen",
+        "onHoverChanged",
+        "onKeepOpenChanged",
+        "matches"
+      ],
+      "researchTokens": [
+        "keptOpen",
+        "onHoverChanged",
+        "onKeepOpenChanged",
+        "matches",
+        "file_edit",
+        "symbol_edit",
+        "semanticTargets"
+      ]
+    },
+    {
+      "id": "agent-adapter-is-opt-in-bounded-and-streamed",
+      "referencePath": "intelligence/agent-adapter.mjs",
+      "researchPath": "intelligence/agent-adapter.mjs",
+      "referenceTokens": [
+        "--json",
+        "--sandbox",
+        "AGENT_BUSY",
+        "task_started",
+        "file_edit"
+      ],
+      "researchTokens": [
+        "--json",
+        "--sandbox",
+        "AGENT_BUSY",
+        "task_started",
+        "file_edit",
+        "onTaskSettled"
+      ],
+      "researchForbidden": [
+        "--full-auto",
+        "--dangerously-bypass-approvals-and-sandbox"
+      ]
+    },
+    {
+      "id": "orchestration-remains-bounded",
+      "referencePath": "intelligence/orchestration-plan.mjs",
+      "researchPath": "intelligence/orchestration-plan.mjs",
+      "referenceTokens": [
+        "MAX_SUBAGENTS",
+        "primary-only",
+        "guarded-parallel"
+      ],
+      "researchTokens": [
+        "MAX_SUBAGENTS",
+        "MAX_PARALLEL_EXTRACTORS",
+        "primary-only",
+        "guarded-parallel"
+      ]
+    },
+    {
+      "id": "local-bridge-remains-loopback-and-bounded",
+      "referencePath": "scripts/serve-local-viewer.mjs",
+      "researchPath": "scripts/serve-local-viewer.mjs",
+      "referenceTokens": [
+        "DEFAULT_HOST = \"127.0.0.1\"",
+        "BODY_LIMIT = 64 * 1024",
+        "PROMPT_LIMIT = 8 * 1024",
+        "DEFAULT_VIEWER_SETTINGS"
+      ],
+      "researchTokens": [
+        "const host=\"127.0.0.1\"",
+        "MAX_BODY=64*1024",
+        "MAX_PROMPT=8192",
+        "promptEnabled:false",
+        "/api/prompt",
+        "/api/replay/frame"
+      ]
+    },
+    {
+      "id": "replay-persists-sessions-checkpoints-and-history",
+      "referencePath": "intelligence/development-replay.mjs",
+      "researchPath": "intelligence/research-replay.mjs",
+      "referenceTokens": [
+        "checkpoints",
+        "sessions",
+        "milestones",
+        "replayFramePayload"
+      ],
+      "researchTokens": [
+        "checkpoints",
+        "sessions",
+        "milestones",
+        "replayFrame",
+        "historicalEntityIds",
+        "replayVerificationStateAt"
+      ]
+    },
+    {
+      "id": "change-intelligence-diffs-stable-semantic-identities",
+      "referencePath": "intelligence/change-intelligence.mjs",
+      "researchPath": "intelligence/change-intelligence.mjs",
+      "referenceTokens": [
+        "semanticSnapshot",
+        "diffSemanticSnapshots",
+        "changedEntityIds"
+      ],
+      "researchTokens": [
+        "semanticSnapshot",
+        "diffSemanticSnapshots",
+        "modifiedEntityIds",
+        "changedEntityIds",
+        "mapGitChangesToSemantic"
+      ]
+    },
+    {
+      "id": "source-location-never-needs-absolute-browser-paths",
+      "referencePath": "viewer_flutter/lib/widgets/activity_location.dart",
+      "researchPath": "viewer_flutter/lib/widgets/activity_location.dart",
+      "referenceTokens": [
+        "file",
+        "pathLabel"
+      ],
+      "researchTokens": [
+        "repository",
+        "file",
+        "pathLabel",
+        "semanticTarget"
+      ],
+      "researchForbidden": [
+        "/Users/",
+        "/home/runner/"
+      ]
+    }
+  ]
+}

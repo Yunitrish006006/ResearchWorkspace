@@ -5,7 +5,7 @@ const scripts=[
  "validate-verification-graph.mjs","validate-verification-telemetry.mjs","validate-change-intelligence.mjs","validate-replay.mjs",
  "validate-agent-adapter.mjs","validate-conversation-sync.mjs","validate-mcp.mjs",
  "validate-local-viewer.mjs","validate-totem-parity.mjs","validate-reference-surface.mjs","validate-repository-integration.mjs","validate-artifact-drift.mjs","validate-source-mapping.mjs",
- "validate-remote-bridge.mjs","validate-tool-surface.mjs"
+ "validate-remote-bridge.mjs","validate-behavior-parity.mjs","validate-tool-surface.mjs"
 ];
 for(const script of scripts){
  const run=spawnSync(process.execPath,[fileURLToPath(new URL(script,import.meta.url))],{stdio:"inherit"});
