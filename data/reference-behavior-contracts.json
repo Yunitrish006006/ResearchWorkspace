@@ -109,12 +109,12 @@
         "AGENT_BUSY",
         "task_started",
         "file_edit",
-        "onTaskSettled"
+        "onTaskSettled",
+        "Unsafe Codex flag rejected",
+        "args.includes(\"--full-auto\")",
+        "dangerously|bypass"
       ],
-      "researchForbidden": [
-        "--full-auto",
-        "--dangerously-bypass-approvals-and-sandbox"
-      ]
+      "researchForbidden": []
     },
     {
       "id": "orchestration-remains-bounded",
