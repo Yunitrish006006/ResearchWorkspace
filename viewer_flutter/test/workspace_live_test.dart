@@ -30,7 +30,7 @@ void main() {
         case '/api/artifact-drift':
           return http.Response(jsonEncode({'available':true,'driftCount':1,'affectedArtifactGroupIds':['presentation'],'findings':[{'id':'x','message':'drift','targetGroupId':'presentation','reason':'newer-source-commit'}]}),200);
         case '/api/activity':
-          return http.Response(jsonEncode({'events':[{'sequence':3,'type':'file_edit','summary':'changed','topicId':'scope'}]}),200);
+          return http.Response(jsonEncode({'events':[{'sequence':3,'type':'symbol_edit','summary':'changed','topicId':'scope','repository':'Three-Factor-Digital-Twin','file':'digital_twin/model.py','symbol':'Estimator.fit','sourceAreaId':'source-area:model'}]}),200);
         case '/api/replay':
           return http.Response(jsonEncode({'earliestSequence':1,'latestSequence':3,'eventCount':3,'checkpointCount':1}),200);
         case '/api/replay/frame':
@@ -55,7 +55,10 @@ void main() {
     expect((await client.changeIntelligence()).changedEntityIds,contains('scope'));
     expect((await client.verificationState()).passed,contains('review-e1'));
     expect((await client.artifactDrift()).driftCount,1);
-    expect((await client.activity()).events.single.focusId,'scope');
+    final activity=(await client.activity()).events.single;
+    expect(activity.focusId,'scope');
+    expect(activity.symbol,'Estimator.fit');
+    expect(activity.sourceAreaId,'source-area:model');
     expect((await client.replayTimeline()).eventCount,3);
     expect((await client.replayFrame(2)).historicalEntityIds,contains('scope'));
     expect((await client.viewerSettings()).replayEnabled,isTrue);

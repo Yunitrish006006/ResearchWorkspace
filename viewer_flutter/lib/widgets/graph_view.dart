@@ -58,6 +58,8 @@ class _GraphViewState extends State<GraphView> {
   bool _detailsCollapsed = false;
   bool _activityCollapsed = true;
   bool _conversationCollapsed = true;
+  ActivitySourceLocation? _hoveredActivityLocation;
+  ActivitySourceLocation? _keptOpenActivityLocation;
 
   GraphScene get _scene => buildGraphScene(_data, expanded: _expanded);
   bool get _conversationAvailable {
@@ -283,6 +285,45 @@ class _GraphViewState extends State<GraphView> {
     }
   }
 
+  ActivitySourceLocation? _activityLocationFor(ActivityEvent event) =>
+      ActivitySourceLocation.fromEvent(event);
+
+  void _setHoveredActivityLocation(ActivitySourceLocation location, bool hovering) {
+    final same = location.matches(_hoveredActivityLocation);
+    if (hovering) {
+      if (!same) setState(() => _hoveredActivityLocation = location);
+    } else if (same) {
+      setState(() => _hoveredActivityLocation = null);
+    }
+  }
+
+  void _toggleKeptOpenActivityLocation(ActivitySourceLocation location) {
+    setState(() {
+      _keptOpenActivityLocation = location.matches(_keptOpenActivityLocation)
+          ? null
+          : location;
+    });
+  }
+
+  void _showActivitySourceLocation(ActivitySourceLocation location, Rect anchor) {
+    final overlay = Overlay.of(context, rootOverlay: true).context.findRenderObject();
+    if (overlay is! RenderBox) return;
+    showMenu<void>(
+      context: context,
+      position: RelativeRect.fromRect(anchor, Offset.zero & overlay.size),
+      color: const Color(0xFF0A1826),
+      elevation: 16,
+      constraints: const BoxConstraints(maxWidth: 460),
+      items: [
+        PopupMenuItem<void>(
+          enabled: false,
+          padding: EdgeInsets.zero,
+          child: _ActivitySourceLocationPopover(location: location),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scene = _scene;
@@ -344,7 +385,7 @@ class _GraphViewState extends State<GraphView> {
                       runningVerification: _verification?.running ?? const {},
                       passedVerification: _verification?.passed ?? const {},
                       failedVerification: _verification?.failed ?? const {},
-                      activityNodeId: _activity?.focusId,
+                      activityNodeId: (_keptOpenActivityLocation ?? _hoveredActivityLocation)?.semanticTarget ?? _activity?.focusId,
                       historicalEntityIds: history,
                     ),
                     size: Size.infinite,
@@ -436,7 +477,12 @@ class _GraphViewState extends State<GraphView> {
                 for (final event in _activityLog.reversed.take(20))
                   _ActivityCard(
                     event: event,
+                    location: _activityLocationFor(event),
                     onFocus: event.focusId == null ? null : () => _activate(event.focusId!),
+                    onLocationSelected: _showActivitySourceLocation,
+                    onLocationHoverChanged: _setHoveredActivityLocation,
+                    keptOpenLocation: _keptOpenActivityLocation,
+                    onLocationKeepOpenChanged: _toggleKeptOpenActivityLocation,
                   ),
               ],
             ),
@@ -609,19 +655,34 @@ class _ConversationEntryCard extends StatelessWidget {
 }
 
 class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.event, this.onFocus});
+  const _ActivityCard({
+    required this.event,
+    required this.location,
+    required this.onLocationSelected,
+    required this.onLocationHoverChanged,
+    required this.keptOpenLocation,
+    required this.onLocationKeepOpenChanged,
+    this.onFocus,
+  });
+
   final ActivityEvent event;
+  final ActivitySourceLocation? location;
   final VoidCallback? onFocus;
+  final void Function(ActivitySourceLocation location, Rect anchor) onLocationSelected;
+  final void Function(ActivitySourceLocation location, bool hovering) onLocationHoverChanged;
+  final ActivitySourceLocation? keptOpenLocation;
+  final ValueChanged<ActivitySourceLocation> onLocationKeepOpenChanged;
 
   @override
   Widget build(BuildContext context) {
-    final location = ActivitySourceLocation.fromEvent(event);
+    final current = location;
+    final keptOpen = current?.matches(keptOpenLocation) ?? false;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(9),
       decoration: BoxDecoration(
         color: const Color(0xFF0B1B29),
-        border: Border.all(color: const Color(0xFF29445A)),
+        border: Border.all(color: keptOpen ? const Color(0xFF6D5B22) : const Color(0xFF29445A)),
         borderRadius: BorderRadius.circular(9),
       ),
       child: Column(
@@ -637,9 +698,15 @@ class _ActivityCard extends StatelessWidget {
             const SizedBox(height: 5),
             CollapsibleMessage(text: event.detail!, style: const TextStyle(color: Color(0xFF9FB4CA), fontFamily: 'monospace', fontSize: 10, height: 1.3)),
           ],
-          if (location != null) ...[
+          if (current != null) ...[
             const SizedBox(height: 7),
-            ActivitySourceLocationCard(location: location, onTap: onFocus ?? () {}),
+            ActivitySourceLocationCard(
+              location: current,
+              keptOpen: keptOpen,
+              onTap: (anchor) => onLocationSelected(current, anchor),
+              onKeepOpenChanged: () => onLocationKeepOpenChanged(current),
+              onHoverChanged: (hovering) => onLocationHoverChanged(current, hovering),
+            ),
           ] else if (onFocus != null) ...[
             const SizedBox(height: 5),
             TextButton.icon(onPressed: onFocus, icon: const Icon(Icons.center_focus_strong, size: 14), label: Text('聚焦 ' + (event.focusId ?? 'graph'))),
@@ -648,6 +715,61 @@ class _ActivityCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ActivitySourceLocationPopover extends StatelessWidget {
+  const _ActivitySourceLocationPopover({required this.location});
+  final ActivitySourceLocation location;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 420,
+    child: Padding(
+      padding: const EdgeInsets.all(14),
+      child: SelectionArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(children: [
+              Icon(Icons.edit_note_outlined, color: Color(0xFF67E8F9)),
+              SizedBox(width: 8),
+              Text('研究變更位置', style: TextStyle(fontWeight: FontWeight.w800)),
+            ]),
+            const SizedBox(height: 10),
+            const Text(
+              '這是目前 Agent Activity 的即時研究定位；位置資訊只來自事件 metadata，不額外維護第二份 modified-files 清單。',
+              style: TextStyle(fontSize: 12, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            _SourceLocationField(label: 'Repository', value: location.repository),
+            _SourceLocationField(label: '相對路徑', value: location.file),
+            for (final target in location.semanticTargets)
+              _SourceLocationField(label: '語意位置', value: target),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _SourceLocationField extends StatelessWidget {
+  const _SourceLocationField({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 2),
+        SelectableText(value, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, height: 1.35)),
+      ],
+    ),
+  );
 }
 
 class _LiveStrip extends StatelessWidget {

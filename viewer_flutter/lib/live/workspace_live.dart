@@ -170,6 +170,8 @@ class ActivityEvent {
     this.planTopicId,
     this.repository,
     this.file,
+    this.symbol,
+    this.sourceAreaId,
     this.taskId,
     this.status,
     this.detail,
@@ -184,6 +186,8 @@ class ActivityEvent {
   final String? planTopicId;
   final String? repository;
   final String? file;
+  final String? symbol;
+  final String? sourceAreaId;
   final String? taskId;
   final String? status;
   final String? detail;
@@ -203,6 +207,8 @@ class ActivityEvent {
       planTopicId: topics.isEmpty ? null : topics.first,
       repository: json['repository'] as String?,
       file: json['file'] as String?,
+      symbol: json['symbol'] as String?,
+      sourceAreaId: json['sourceAreaId'] as String?,
       taskId: json['taskId'] as String?,
       status: json['status'] as String?,
       detail: json['detail'] as String?,

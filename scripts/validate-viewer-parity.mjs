@@ -5,6 +5,7 @@ const flutter=fs.readFileSync(new URL("../viewer_flutter/lib/widgets/graph_view.
 const flutterLive=fs.readFileSync(new URL("../viewer_flutter/lib/live/workspace_live.dart",import.meta.url),"utf8");
 const flutterData=fs.readFileSync(new URL("../viewer_flutter/lib/model/graph_data.dart",import.meta.url),"utf8");
 const flutterScene=fs.readFileSync(new URL("../viewer_flutter/lib/model/graph_scene.dart",import.meta.url),"utf8");
+const activityLocation=fs.readFileSync(new URL("../viewer_flutter/lib/widgets/activity_location.dart",import.meta.url),"utf8");
 const legacy=fs.readFileSync(new URL("../site/local-live.js",import.meta.url),"utf8");
 const legacyGraph=fs.readFileSync(new URL("../site/research-graph-v2.js",import.meta.url),"utf8");
 const html=fs.readFileSync(new URL("../site/index.html",import.meta.url),"utf8");
@@ -33,6 +34,12 @@ assert.ok(legacy.includes("syncDraft"));
 assert.ok(legacy.includes("graphApi.replaceData"));
 assert.ok(legacyGraph.includes("replaceData:replaceData"));
 assert.ok(flutter.includes("_data = results[0] as GraphData"));
+for(const token of ["file_edit","symbol_edit","keptOpen","onHoverChanged","onKeepOpenChanged","semanticTargets","matches"]){
+  assert.ok(activityLocation.includes(token),"Activity Source Location parity missing "+token);
+}
+for(const token of ["_hoveredActivityLocation","_keptOpenActivityLocation","_showActivitySourceLocation","_toggleKeptOpenActivityLocation"]){
+  assert.ok(flutter.includes(token),"Flutter activity-location host behavior missing "+token);
+}
 
 for(const relation of ["contains","supports","uses-method","grounded-in","validated-by","limits"]){
   assert.ok(flutter.includes("'"+relation+"'")||flutterScene.includes("'"+relation+"'"),"Flutter relation missing "+relation);
