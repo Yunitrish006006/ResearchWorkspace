@@ -29,6 +29,9 @@ assert.ok(flutterHost.includes("changeAnimationsEnabled: _settings.changeAnimati
 assert.ok(flutter.includes("final changePulse = changeAnimationsEnabled"));
 assert.ok(flutterHost.includes("WorkspaceLiveClient"));
 assert.ok(flutterHost.includes("_pollConversation"));
+for(const token of ["_pollWorkspace","_pollActivity","_pollVerification","_pollAdapter","_pollReplayTimeline","_activePolls","_conversationPollFailures"]){
+  assert.ok(flutterHost.includes(token),"Totem-style bounded live polling missing "+token);
+}
 assert.ok(flutterHost.includes("_selectReplay"));
 for(const token of ["OrchestrationSummary","currentTask","lastTask","CODEX BUSY","sessions.length","milestones.length"]){
   assert.ok((flutterLive+flutterHost).includes(token),"Flutter live status parity missing "+token);

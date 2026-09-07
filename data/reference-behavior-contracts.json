@@ -24,7 +24,14 @@
         "_pollConversation",
         "_selectReplay",
         "_submitPrompt",
-        "GraphView("
+        "GraphView(",
+        "_pollWorkspace",
+        "_pollActivity",
+        "_pollVerification",
+        "_pollAdapter",
+        "_pollReplayTimeline",
+        "_activePolls",
+        "_conversationPollFailures"
       ],
       "researchForbidden": [
         "class _GraphPainter"

@@ -20,9 +20,14 @@ class WorkspaceGraphHost extends StatefulWidget {
 class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
   late GraphData _data;
   WorkspaceLiveClient? _client;
-  Timer? _statusPoller;
+  Timer? _workspacePoller;
+  Timer? _activityPoller;
+  Timer? _verificationPoller;
+  Timer? _adapterPoller;
+  Timer? _replayPoller;
   Timer? _conversationPoller;
   Timer? _draftDebounce;
+  final Set<String> _activePolls = <String>{};
   RepositoryStatus? _repoStatus;
   ResearchChange? _change;
   VerificationState? _verification;
@@ -46,7 +51,9 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
   ReplayFrame? _replayFrame;
   bool _probing = true;
   bool _submitting = false;
+  int _conversationPollFailures = 0;
   String? _liveError;
+  String? _liveErrorSource;
   final TextEditingController _promptController = TextEditingController();
   FloatingPanelDock _workspaceDock = FloatingPanelDock.topCenter;
   FloatingPanelDock _activityDock = FloatingPanelDock.centerRight;
@@ -90,7 +97,11 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
 
   @override
   void dispose() {
-    _statusPoller?.cancel();
+    _workspacePoller?.cancel();
+    _activityPoller?.cancel();
+    _verificationPoller?.cancel();
+    _adapterPoller?.cancel();
+    _replayPoller?.cancel();
     _conversationPoller?.cancel();
     _draftDebounce?.cancel();
     _client?.close();
@@ -110,13 +121,31 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
     });
     if (client == null) return;
     await _poll();
-    _statusPoller =
-        Timer.periodic(const Duration(milliseconds: 2200), (_) => _poll());
+    _workspacePoller = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => unawaited(_pollWorkspace()),
+    );
+    _activityPoller = Timer.periodic(
+      const Duration(seconds: 2),
+      (_) => unawaited(_pollActivity()),
+    );
+    _verificationPoller = Timer.periodic(
+      const Duration(seconds: 8),
+      (_) => unawaited(_pollVerification()),
+    );
+    _adapterPoller = Timer.periodic(
+      const Duration(seconds: 3),
+      (_) => unawaited(_pollAdapter()),
+    );
+    _replayPoller = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => unawaited(_pollReplayTimeline()),
+    );
     if (_conversationAvailable) {
       await _pollConversation();
       _conversationPoller = Timer.periodic(
-        const Duration(milliseconds: 1200),
-        (_) => _pollConversation(),
+        const Duration(milliseconds: 1500),
+        (_) => unawaited(_pollConversation()),
       );
     }
   }
@@ -165,15 +194,185 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
             _adapter?.lastTask?.orchestration ??
             _orchestration;
         _liveError = null;
+        _liveErrorSource = null;
       });
     } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
+      if (mounted) setState(() {
+        _liveError = error.toString();
+        _liveErrorSource = 'initial';
+      });
+    }
+  }
+
+  Future<void> _pollWorkspace() async {
+    final client = _client;
+    if (client == null || !_activePolls.add('workspace')) return;
+    try {
+      final results = await Future.wait<Object>([
+        client.graphData(),
+        client.repositoryStatus(),
+        client.changeIntelligence(),
+        client.artifactDrift(),
+        client.viewerSettings(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _data = results[0] as GraphData;
+        _repoStatus = results[1] as RepositoryStatus;
+        _change = results[2] as ResearchChange;
+        _artifactDrift = results[3] as ArtifactDrift;
+        _settings = results[4] as ViewerSettings;
+        if (_liveErrorSource == 'workspace') {
+          _liveError = null;
+          _liveErrorSource = null;
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() {
+        _liveError = error.toString();
+        _liveErrorSource = 'workspace';
+      });
+    } finally {
+      _activePolls.remove('workspace');
+    }
+  }
+
+  Future<void> _pollActivity() async {
+    final client = _client;
+    if (client == null ||
+        !_settings.agentActivityEnabled ||
+        !_activePolls.add('activity')) return;
+    try {
+      final batch = await client.activity(after: _activitySequence);
+      if (batch.events.isEmpty) return;
+      GraphData? graph;
+      ResearchChange? change;
+      ArtifactDrift? drift;
+      final refreshGraph = batch.events.any((event) =>
+        event.type == 'file_edit' ||
+        event.type == 'symbol_edit' ||
+        event.type == 'research_change' ||
+        event.type == 'source_indexed' ||
+        event.type == 'task_completed');
+      if (refreshGraph) {
+        try {
+          final refreshed = await Future.wait<Object>([
+            client.graphData(),
+            client.changeIntelligence(),
+            client.artifactDrift(),
+          ]);
+          graph = refreshed[0] as GraphData;
+          change = refreshed[1] as ResearchChange;
+          drift = refreshed[2] as ArtifactDrift;
+        } catch (_) {
+          // Activity remains authoritative even if the refresh layer is briefly unavailable.
+        }
+      }
+      if (!mounted) return;
+      setState(() {
+        _mergeActivity(batch);
+        if (graph != null) _data = graph!;
+        if (change != null) _change = change;
+        if (drift != null) _artifactDrift = drift;
+        if (_liveErrorSource == 'activity') {
+          _liveError = null;
+          _liveErrorSource = null;
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() {
+        _liveError = error.toString();
+        _liveErrorSource = 'activity';
+      });
+    } finally {
+      _activePolls.remove('activity');
+    }
+  }
+
+  Future<void> _pollVerification() async {
+    final client = _client;
+    if (client == null || !_activePolls.add('verification')) return;
+    try {
+      final verification = await client.verificationState();
+      if (!mounted) return;
+      setState(() {
+        _verification = verification;
+        if (_liveErrorSource == 'verification') {
+          _liveError = null;
+          _liveErrorSource = null;
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() {
+        _liveError = error.toString();
+        _liveErrorSource = 'verification';
+      });
+    } finally {
+      _activePolls.remove('verification');
+    }
+  }
+
+  Future<void> _pollAdapter() async {
+    final client = _client;
+    if (client == null || !_activePolls.add('adapter')) return;
+    try {
+      final adapter = await client.adapterStatus();
+      if (!mounted) return;
+      setState(() {
+        _adapter = adapter;
+        _orchestration =
+            adapter.currentTask?.orchestration ??
+            adapter.lastTask?.orchestration ??
+            _orchestration;
+        if (_liveErrorSource == 'adapter') {
+          _liveError = null;
+          _liveErrorSource = null;
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() {
+        _liveError = error.toString();
+        _liveErrorSource = 'adapter';
+      });
+    } finally {
+      _activePolls.remove('adapter');
+    }
+  }
+
+  Future<void> _pollReplayTimeline() async {
+    final client = _client;
+    if (client == null ||
+        !_settings.replayEnabled ||
+        !_activePolls.add('replay')) return;
+    try {
+      final timeline = await client.replayTimeline();
+      if (!mounted) return;
+      setState(() {
+        _timeline = timeline;
+        if (_replayFrame != null && _replayFrame!.sequence >= timeline.latest) {
+          _replayFrame = null;
+        }
+        if (_liveErrorSource == 'replay') {
+          _liveError = null;
+          _liveErrorSource = null;
+        }
+      });
+    } catch (error) {
+      if (mounted) setState(() {
+        _liveError = error.toString();
+        _liveErrorSource = 'replay';
+      });
+    } finally {
+      _activePolls.remove('replay');
     }
   }
 
   Future<void> _pollConversation() async {
     final client = _client;
-    if (client == null || !_conversationAvailable) return;
+    if (client == null ||
+        !_conversationAvailable ||
+        !_settings.promptEnabled ||
+        !_activePolls.add('conversation')) return;
     try {
       final snapshot = await client.conversation(after: _conversationRevision);
       if (!mounted) return;
@@ -188,9 +387,22 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         }
         _conversationRevision = snapshot.latestRevision;
         _conversationDraft = snapshot.draft;
+        _conversationPollFailures = 0;
+        if (_liveErrorSource == 'conversation') {
+          _liveError = null;
+          _liveErrorSource = null;
+        }
       });
-    } catch (_) {
-      // Conversation sync is loopback/private and never blocks graph polling.
+    } catch (error) {
+      _conversationPollFailures += 1;
+      if (mounted && _conversationPollFailures >= 3) {
+        setState(() {
+          _liveError = error.toString();
+          _liveErrorSource = 'conversation';
+        });
+      }
+    } finally {
+      _activePolls.remove('conversation');
     }
   }
 
@@ -245,7 +457,11 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         _orchestration = result.orchestration ?? result.task?.orchestration ?? _orchestration;
         _liveError = null;
       });
-      await _poll();
+      await Future.wait<void>([
+        _pollActivity(),
+        _pollAdapter(),
+        _pollReplayTimeline(),
+      ]);
     } catch (error) {
       if (mounted) setState(() => _liveError = error.toString());
     } finally {
@@ -362,6 +578,7 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
               replay: _timeline,
               promptEnabled: _settings.promptEnabled,
               error: _liveError,
+              errorSource: _liveErrorSource,
               onPromptToggle: _togglePrompt,
             ),
           ),
@@ -484,6 +701,7 @@ class _WorkspaceStatusPanel extends StatelessWidget {
     required this.replay,
     required this.promptEnabled,
     required this.error,
+    required this.errorSource,
     required this.onPromptToggle,
   });
 
@@ -498,6 +716,7 @@ class _WorkspaceStatusPanel extends StatelessWidget {
   final ReplayTimeline? replay;
   final bool promptEnabled;
   final String? error;
+  final String? errorSource;
   final VoidCallback onPromptToggle;
 
   @override
@@ -578,7 +797,10 @@ class _WorkspaceStatusPanel extends StatelessWidget {
             const Color(0xFFA5B4FC),
           ),
         if (error != null)
-          const _Pill('LOCAL API issue', Color(0xFFF87171)),
+          _Pill(
+            'LOCAL API · ' + (errorSource ?? 'unknown'),
+            const Color(0xFFF87171),
+          ),
         FilledButton.tonal(
           onPressed: onPromptToggle,
           child: Text(promptEnabled ? 'Prompt ON' : 'Prompt OFF'),
