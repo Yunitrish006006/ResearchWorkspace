@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { impactAnalysis, loadKnowledge, workspaceRoot } from "./research-knowledge.mjs";
 import { repositoryStatusSummary } from "./repository-status.mjs";
 import { loadSourceIndex, refreshSourceIndex } from "./source-index.mjs";
@@ -7,6 +8,101 @@ import { mappedImpactSurface } from "./source-mapping.mjs";
 import { buildGraphViewModel } from "./graph-view-model.mjs";
 
 const statePath = path.join(workspaceRoot, ".research-index", "change-intelligence.json");
+
+function git(args, cwd) {
+  try {
+    return execFileSync("git", args, {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"]
+    });
+  } catch {
+    return null;
+  }
+}
+
+export function parseGitStatusPorcelain(
+  raw,
+  { repositoryId = "unknown", repositoryName = repositoryId } = {}
+) {
+  const parts = String(raw ?? "").split("\0");
+  const changes = [];
+  for (let i = 0; i < parts.length; i += 1) {
+    const entry = parts[i];
+    if (!entry || entry.length < 3) continue;
+    const xy = entry.slice(0, 2);
+    const pathValue = entry.slice(3);
+    if (!pathValue) continue;
+    const primary = xy[0] !== " " ? xy[0] : xy[1];
+    const renamed = xy.includes("R") || xy.includes("C");
+    const previousPath = renamed ? (parts[++i] || null) : null;
+    changes.push(Object.freeze({
+      repositoryId,
+      repositoryName,
+      status: primary === "?" && xy === "??" ? "A" : primary,
+      indexStatus: xy[0],
+      worktreeStatus: xy[1],
+      path: pathValue.replaceAll("\\", "/"),
+      previousPath: previousPath?.replaceAll("\\", "/") ?? null
+    }));
+  }
+  return changes;
+}
+
+export function collectGitChanges({
+  knowledge = loadKnowledge(),
+  repositoryRoots = null
+} = {}) {
+  const roots = repositoryRoots ?? {
+    "research-workspace": workspaceRoot,
+    thesis: (() => {
+      const status = repositoryStatusSummary({ knowledge }).repositories
+        .find((x) => x.id === "thesis");
+      if (!status?.pathPresent) return null;
+      return process.env.RESEARCH_THESIS_REPO
+        ? path.resolve(process.env.RESEARCH_THESIS_REPO)
+        : path.resolve(workspaceRoot, "..", "Three-Factor-Digital-Twin");
+    })()
+  };
+  const results = [];
+  for (const repository of knowledge.repositories) {
+    const cwd = roots[repository.id];
+    if (!cwd || !fs.existsSync(path.join(cwd, ".git"))) continue;
+    const raw = git(["status", "--porcelain=v1", "-z"], cwd);
+    if (raw == null) continue;
+    results.push(...parseGitStatusPorcelain(raw, {
+      repositoryId: repository.id,
+      repositoryName: repository.name
+    }));
+  }
+  return results;
+}
+
+export function mapGitChangesToSemantic(
+  gitChanges,
+  { knowledge = loadKnowledge(), index = loadSourceIndex() } = {}
+) {
+  return gitChanges.map((change) => {
+    if (change.repositoryId !== "thesis") {
+      return Object.freeze({
+        ...change,
+        entityIds: [],
+        claimIds: [],
+        topicIds: [],
+        mappingMode: "workspace-infrastructure"
+      });
+    }
+    const surface = mappedImpactSurface([change.path], { knowledge, index });
+    const file = surface.files[0];
+    return Object.freeze({
+      ...change,
+      entityIds: surface.entityIds,
+      claimIds: surface.claimIds,
+      topicIds: surface.topicIds,
+      mappingMode: file?.mappingMode ?? "unmapped"
+    });
+  });
+}
 
 function stableValue(value) {
   if (Array.isArray(value)) return value.map(stableValue);
@@ -207,7 +303,13 @@ export function researchChangeIntelligence({
 } = {}) {
   const repositoryStatus = repositoryStatusSummary({ knowledge });
   const thesis = repositoryStatus.repositories.find((x) => x.id === "thesis");
-  const effectiveFiles = changedFiles?.length ? changedFiles : (thesis?.changedFiles ?? []);
+  const gitChanges = collectGitChanges({ knowledge });
+  const thesisGitChanges = gitChanges.filter((x) => x.repositoryId === "thesis");
+  const effectiveFiles = changedFiles?.length
+    ? changedFiles
+    : thesisGitChanges.length
+      ? thesisGitChanges.map((x) => x.path)
+      : (thesis?.changedFiles ?? []);
 
   let index = loadSourceIndex();
   let indexRefresh = { mode: "fresh", refreshedFiles: [], removedFiles: [] };
@@ -222,6 +324,7 @@ export function researchChangeIntelligence({
   }
 
   const sourceMapping = mappedImpactSurface(effectiveFiles, { knowledge, index });
+  const mappedGitChanges = mapGitChangesToSemantic(gitChanges, { knowledge, index });
   const mappedClaims = sourceMapping.claimIds;
   const mappedTopics = [...new Set([...changedTopics, ...sourceMapping.topicIds])];
 
@@ -286,6 +389,9 @@ export function researchChangeIntelligence({
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     changedFiles: effectiveFiles,
+    gitChanges,
+    mappedGitChanges,
+    changedRepositoryIds: [...new Set(gitChanges.map((x) => x.repositoryId))],
     indexRefresh,
     sourceMapping,
     before: previous,
