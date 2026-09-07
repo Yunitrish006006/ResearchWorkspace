@@ -24,6 +24,8 @@ for(const semantic of ["changedEntityIds","impactedTopicIds","runningVerificatio
   assert.ok(legacyGraph.includes(semantic),"Legacy overlay missing "+semantic);
 }
 assert.ok(flutter.includes("ArtifactDrift"));
+assert.ok(flutter.includes("changeAnimationsEnabled: _settings.changeAnimationsEnabled"));
+assert.ok(flutter.includes("final changePulse = changeAnimationsEnabled"));
 assert.ok(legacy.includes("artifact.driftCount"));
 assert.ok(html.includes('id="artifactDrift"'));
 assert.ok(html.includes('id="conversationPanel"'));

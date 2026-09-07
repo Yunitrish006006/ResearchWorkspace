@@ -537,6 +537,7 @@ class _GraphViewState extends State<GraphView>
                       selectedId: _selectedId,
                       changedEntityIds: _change?.changedEntityIds ?? const {},
                       impactedTopicIds: _change?.impactedTopicIds ?? const {},
+                      changeAnimationsEnabled: _settings.changeAnimationsEnabled,
                       runningVerification: _verification?.running ?? const {},
                       passedVerification: _verification?.passed ?? const {},
                       failedVerification: _verification?.failed ?? const {},
@@ -1093,6 +1094,7 @@ class _GraphPainter extends CustomPainter {
     required this.selectedId,
     required this.changedEntityIds,
     required this.impactedTopicIds,
+    required this.changeAnimationsEnabled,
     required this.runningVerification,
     required this.passedVerification,
     required this.failedVerification,
@@ -1105,6 +1107,7 @@ class _GraphPainter extends CustomPainter {
   final String? selectedId;
   final Set<String> changedEntityIds;
   final Set<String> impactedTopicIds;
+  final bool changeAnimationsEnabled;
   final Set<String> runningVerification;
   final Set<String> passedVerification;
   final Set<String> failedVerification;
@@ -1174,12 +1177,15 @@ class _GraphPainter extends CustomPainter {
           : vStatus != null && edge.type == 'validated-by'
           ? _verificationColor(vStatus)
           : _edgeColor(edge.type);
+      final changePulse = changeAnimationsEnabled
+          ? (math.sin(activityPulse.value * math.pi * 2) + 1) * .5
+          : .5;
       canvas.drawLine(
         a.offset,
         b.offset,
         Paint()
-          ..color = color.withValues(alpha: changed ? .94 : incident ? .72 : .07)
-          ..strokeWidth = changed ? 2.7 : vStatus != null && edge.type == 'validated-by' ? 2.5 : incident ? 1.7 : .8,
+          ..color = color.withValues(alpha: changed ? .70 + changePulse * .27 : incident ? .72 : .07)
+          ..strokeWidth = changed ? 2.5 + changePulse * 1.6 : vStatus != null && edge.type == 'validated-by' ? 2.5 : incident ? 1.7 : .8,
       );
     }
 
@@ -1202,8 +1208,15 @@ class _GraphPainter extends CustomPainter {
         Paint()..color = Colors.white.withValues(alpha: spotlightVisible ? 1 : .14),
       );
 
-      if (node.kind == 'topic' && impactedTopicIds.contains(node.id)) _ring(canvas, p.offset, radius + 14, const Color(0xFFA78BFA), 2.2);
-      if (changedEntityIds.contains(node.id)) _ring(canvas, p.offset, radius + 11, const Color(0xFFFBBF24), 2.4);
+      final changePulse = changeAnimationsEnabled
+          ? (math.sin(activityPulse.value * math.pi * 2) + 1) * .5
+          : .5;
+      if (node.kind == 'topic' && impactedTopicIds.contains(node.id)) {
+        _ring(canvas, p.offset, radius + 12 + changePulse * 4, const Color(0xFFA78BFA), 2.2 + changePulse);
+      }
+      if (changedEntityIds.contains(node.id)) {
+        _ring(canvas, p.offset, radius + 9 + changePulse * 5, const Color(0xFFFBBF24), 2.1 + changePulse * 1.2);
+      }
       final vStatus = failedVerification.contains(node.id) ? 'failed' : runningVerification.contains(node.id) ? 'running' : passedVerification.contains(node.id) ? 'passed' : null;
       if (vStatus != null) _ring(canvas, p.offset, radius + 8, _verificationColor(vStatus), 2.5);
       if (activityNodeId == node.id) {
