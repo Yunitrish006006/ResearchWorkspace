@@ -464,6 +464,11 @@ class _GraphViewState extends State<GraphView>
   Widget build(BuildContext context) {
     final scene = _scene;
     final selected = scene.byId[_selectedId];
+    final relationships = selected == null
+        ? const <VisualEdge>[]
+        : scene.edges
+            .where((edge) => edge.from == selected.id || edge.to == selected.id)
+            .toList(growable: false);
     final mediaWidth = MediaQuery.sizeOf(context).width;
     final history = _replayFrame?.historicalEntityIds ?? const <String>{};
 
@@ -711,6 +716,12 @@ class _GraphViewState extends State<GraphView>
                 CollapsibleMessage(text: selected.summary, style: const TextStyle(color: Color(0xFFB8C9DA), height: 1.5)),
                 if (selected.status != null) _InfoItem('STATUS · ' + selected.status!),
                 if (selected.detail != null) _InfoItem(selected.detail!),
+                const SizedBox(height: 14),
+                const _SectionTitle('Visible relationships'),
+                if (relationships.isEmpty)
+                  const _InfoItem('No visible relationship under current filters'),
+                for (final edge in relationships)
+                  _InfoItem(edge.type + ' · ' + edge.from + ' → ' + edge.to + '\n' + edge.label),
                 const SizedBox(height: 12),
                 Text(
                   selected.kind == 'topic' || selected.kind == 'claim' || selected.kind == 'source-area'
@@ -782,6 +793,25 @@ class _Panel extends StatelessWidget {
       boxShadow: const [BoxShadow(color: Color(0x99000000), blurRadius: 30, offset: Offset(0, 12))],
     ),
     child: child,
+  );
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text.toUpperCase(),
+      style: const TextStyle(
+        color: Color(0xFF93C5FD),
+        fontSize: 11,
+        letterSpacing: 1.1,
+        fontWeight: FontWeight.w700,
+      ),
+    ),
   );
 }
 
@@ -1091,16 +1121,36 @@ class _GraphPainter extends CustomPainter {
     ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, bg);
 
+    final byId = scene.byId;
     final projected = {for (final n in scene.nodes) n.id: camera.project(n.position, size)};
+    final selectedNode = byId[selectedId];
+    final spotlightId = selectedNode?.isChild == true ? selectedId : null;
+    final connected = <String>{};
+    final relatedOwners = <String>{};
+    if (spotlightId != null) {
+      connected.add(spotlightId);
+      for (final edge in scene.edges) {
+        if (edge.from != spotlightId && edge.to != spotlightId) continue;
+        final other = edge.from == spotlightId ? edge.to : edge.from;
+        connected.add(other);
+        final owner = byId[other]?.ownerId;
+        if (owner != null) relatedOwners.add(owner);
+      }
+    }
+    final spotlightOwner = spotlightId == null ? null : byId[spotlightId]?.ownerId;
+
     for (final cluster in scene.clusters) {
       if (historicalEntityIds.isNotEmpty && !historicalEntityIds.contains(cluster.ownerId)) continue;
       final p = projected[cluster.ownerId];
       if (p == null) continue;
       final r = math.max(42.0, cluster.radius * p.scale);
+      final clusterActive = spotlightId == null ||
+          cluster.ownerId == spotlightOwner ||
+          relatedOwners.contains(cluster.ownerId);
       canvas.drawOval(
         Rect.fromCenter(center: p.offset, width: r * 1.6, height: r * .56),
         Paint()
-          ..color = const Color(0xFF60A5FA).withValues(alpha: .18)
+          ..color = const Color(0xFF60A5FA).withValues(alpha: clusterActive ? .18 : .035)
           ..style = PaintingStyle.stroke,
       );
     }
@@ -1110,6 +1160,7 @@ class _GraphPainter extends CustomPainter {
       final a = projected[edge.from];
       final b = projected[edge.to];
       if (a == null || b == null) continue;
+      final incident = spotlightId == null || edge.from == spotlightId || edge.to == spotlightId;
       final changed = changedEntityIds.contains(edge.id) || changedEntityIds.contains(edge.from) || changedEntityIds.contains(edge.to);
       final vStatus = failedVerification.contains(edge.from) || failedVerification.contains(edge.to)
           ? 'failed'
@@ -1127,8 +1178,8 @@ class _GraphPainter extends CustomPainter {
         a.offset,
         b.offset,
         Paint()
-          ..color = color.withValues(alpha: changed ? .94 : .58)
-          ..strokeWidth = changed ? 2.7 : vStatus != null && edge.type == 'validated-by' ? 2.5 : 1.4,
+          ..color = color.withValues(alpha: changed ? .94 : incident ? .72 : .07)
+          ..strokeWidth = changed ? 2.7 : vStatus != null && edge.type == 'validated-by' ? 2.5 : incident ? 1.7 : .8,
       );
     }
 
@@ -1141,6 +1192,15 @@ class _GraphPainter extends CustomPainter {
       final base = node.kind == 'root' ? 18.0 : node.kind == 'topic' ? 13.0 : node.kind == 'claim' ? 8.0 : 5.8;
       final radius = math.max(node.isChild ? 4.5 : 8.0, base * p.scale);
       final color = _nodeColor(node);
+      final spotlightVisible = spotlightId == null ||
+          connected.contains(node.id) ||
+          node.id == spotlightOwner ||
+          relatedOwners.contains(node.id) ||
+          (node.ownerId != null && relatedOwners.contains(node.ownerId));
+      canvas.saveLayer(
+        Rect.fromCircle(center: p.offset, radius: radius + 260),
+        Paint()..color = Colors.white.withValues(alpha: spotlightVisible ? 1 : .14),
+      );
 
       if (node.kind == 'topic' && impactedTopicIds.contains(node.id)) _ring(canvas, p.offset, radius + 14, const Color(0xFFA78BFA), 2.2);
       if (changedEntityIds.contains(node.id)) _ring(canvas, p.offset, radius + 11, const Color(0xFFFBBF24), 2.4);
@@ -1167,6 +1227,7 @@ class _GraphPainter extends CustomPainter {
         ellipsis: '…',
       )..layout(maxWidth: node.isChild ? 230 : 190);
       tp.paint(canvas, p.offset + Offset(radius + 6, -tp.height / 2));
+      canvas.restore();
     }
   }
 
