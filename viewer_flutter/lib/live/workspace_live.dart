@@ -74,8 +74,11 @@ class WorkspaceLiveClient {
   Future<ViewerSettings> updateViewerSettings(ViewerSettings settings) async =>
       ViewerSettings.fromJson(await _post('/api/viewer-settings', settings.toJson()));
 
-  Future<PromptSubmission> submitPrompt(String prompt) async =>
-      PromptSubmission.fromJson(await _post('/api/prompt', {'prompt': prompt}));
+  Future<PromptSubmission> submitPrompt(String prompt, {String? clientId}) async =>
+      PromptSubmission.fromJson(await _post('/api/prompt', {
+        'prompt': prompt,
+        if (clientId != null) 'clientId': clientId,
+      }));
 
   Future<ConversationSnapshot> conversation({int after = 0}) async =>
       ConversationSnapshot.fromJson(await _get('/api/conversation', {'after': after.toString()}));
@@ -156,6 +159,24 @@ class VerificationState {
     passed: _strings(json['passedTargetIds']).toSet(),
     failed: _strings(json['failedTargetIds']).toSet(),
   );
+
+  factory VerificationState.fromReplayJson(Map<String, dynamic> json) {
+    final running = <String>{};
+    final passed = <String>{};
+    final failed = <String>{};
+    for (final raw in (json['entries'] as List? ?? const [])) {
+      if (raw is! Map) continue;
+      final entry = Map<String, dynamic>.from(raw);
+      final id = entry['targetId'] as String? ?? entry['target'] as String?;
+      if (id == null || id.isEmpty) continue;
+      switch (entry['status']) {
+        case 'running': running.add(id); break;
+        case 'passed': passed.add(id); break;
+        case 'failed': failed.add(id); break;
+      }
+    }
+    return VerificationState(running: running, passed: passed, failed: failed);
+  }
 }
 
 class ActivityEvent {
@@ -244,17 +265,42 @@ class ReplayTimeline {
 }
 
 class ReplayFrame {
-  const ReplayFrame({required this.sequence, required this.live, required this.historicalEntityIds});
+  const ReplayFrame({
+    required this.sequence,
+    required this.live,
+    required this.historicalEntityIds,
+    this.activity,
+    this.changeIntelligence,
+    this.verification,
+  });
   final int sequence;
   final bool live;
   final Set<String> historicalEntityIds;
+  final ActivityEvent? activity;
+  final ResearchChange? changeIntelligence;
+  final VerificationState? verification;
 
   factory ReplayFrame.fromJson(Map<String, dynamic> json) {
-    final checkpoint = json['checkpoint'] is Map ? Map<String, dynamic>.from(json['checkpoint'] as Map) : const <String, dynamic>{};
+    final checkpoint = json['checkpoint'] is Map
+        ? Map<String, dynamic>.from(json['checkpoint'] as Map)
+        : const <String, dynamic>{};
+    final rawActivity = json['activity'];
+    final rawChange = json['changeIntelligence'];
+    final rawVerification = json['verification'];
     return ReplayFrame(
       sequence: (json['sequence'] as num?)?.toInt() ?? 0,
       live: json['live'] as bool? ?? false,
       historicalEntityIds: _strings(checkpoint['historicalEntityIds']).toSet(),
+      activity: rawActivity is Map
+          ? ActivityEvent.fromJson(Map<String, dynamic>.from(rawActivity))
+          : null,
+      changeIntelligence: rawChange is Map
+          ? ResearchChange.fromJson(Map<String, dynamic>.from(rawChange))
+          : null,
+      verification: rawVerification is Map
+          ? VerificationState.fromReplayJson(
+              Map<String, dynamic>.from(rawVerification))
+          : null,
     );
   }
 }

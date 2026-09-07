@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const flutter=fs.readFileSync(new URL("../viewer_flutter/lib/widgets/graph_view.dart",import.meta.url),"utf8");
+const flutterHost=fs.readFileSync(new URL("../viewer_flutter/lib/widgets/workspace_graph_host.dart",import.meta.url),"utf8");
 const flutterLive=fs.readFileSync(new URL("../viewer_flutter/lib/live/workspace_live.dart",import.meta.url),"utf8");
 const flutterData=fs.readFileSync(new URL("../viewer_flutter/lib/model/graph_data.dart",import.meta.url),"utf8");
 const flutterScene=fs.readFileSync(new URL("../viewer_flutter/lib/model/graph_scene.dart",import.meta.url),"utf8");
@@ -23,24 +24,29 @@ for(const semantic of ["changedEntityIds","impactedTopicIds","runningVerificatio
   assert.ok(flutter.includes(semantic),"Flutter overlay missing "+semantic);
   assert.ok(legacyGraph.includes(semantic),"Legacy overlay missing "+semantic);
 }
-assert.ok(flutter.includes("ArtifactDrift"));
-assert.ok(flutter.includes("changeAnimationsEnabled: _settings.changeAnimationsEnabled"));
+assert.ok(flutterHost.includes("ArtifactDrift"));
+assert.ok(flutterHost.includes("changeAnimationsEnabled: _settings.changeAnimationsEnabled"));
 assert.ok(flutter.includes("final changePulse = changeAnimationsEnabled"));
+assert.ok(flutterHost.includes("WorkspaceLiveClient"));
+assert.ok(flutterHost.includes("_pollConversation"));
+assert.ok(flutterHost.includes("_selectReplay"));
+assert.ok(!flutter.includes("WorkspaceLiveClient"),"GraphView must not own transport polling");
+assert.ok(!flutter.includes("Timer.periodic"),"GraphView must remain renderer-only");
 assert.ok(legacy.includes("artifact.driftCount"));
 assert.ok(html.includes('id="artifactDrift"'));
 assert.ok(html.includes('id="conversationPanel"'));
 assert.ok(html.includes('id="conversationToggle"'));
-assert.ok(flutter.includes("Research Conversation"));
+assert.ok(flutterHost.includes("Research Conversation"));
 assert.ok(legacy.includes("pollConversation"));
 assert.ok(legacy.includes("syncDraft"));
 assert.ok(legacy.includes("graphApi.replaceData"));
 assert.ok(legacyGraph.includes("replaceData:replaceData"));
-assert.ok(flutter.includes("_data = results[0] as GraphData"));
+assert.ok(flutterHost.includes("_data = results[0] as GraphData"));
 for(const token of ["file_edit","symbol_edit","keptOpen","onHoverChanged","onKeepOpenChanged","semanticTargets","matches"]){
   assert.ok(activityLocation.includes(token),"Activity Source Location parity missing "+token);
 }
 for(const token of ["_hoveredActivityLocation","_keptOpenActivityLocation","_showActivitySourceLocation","_toggleKeptOpenActivityLocation","_transientActivityExpanded","_visibleExpanded","_syncTransientActivityExpansion","_liveActivityFocus","Visible relationships","spotlightId","relatedOwners","SingleTickerProviderStateMixin","BrowserContextMenu","kSecondaryMouseButton","LogicalKeyboardKey","activityPulse"]){
-  assert.ok(flutter.includes(token),"Flutter activity-location host behavior missing "+token);
+  assert.ok((flutterHost+flutter).includes(token),"Flutter activity-location/renderer behavior missing "+token);
 }
 
 for(const relation of ["contains","supports","uses-method","grounded-in","validated-by","limits"]){

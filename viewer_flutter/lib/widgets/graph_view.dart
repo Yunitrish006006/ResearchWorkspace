@@ -4,16 +4,43 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../live/workspace_live.dart';
 import '../model/graph_data.dart';
 import '../model/graph_scene.dart';
-import 'activity_location.dart';
 import 'collapsible_message.dart';
 import 'floating_panel.dart';
 
+/// Pure 3D research graph surface.
+///
+/// Totem parity rule: transport/polling/prompt/replay/conversation state belongs
+/// to WorkspaceGraphHost. GraphView owns camera, semantic LOD, relation filters,
+/// selection/spotlight and drawing only.
 class GraphView extends StatefulWidget {
-  const GraphView({super.key, required this.data});
+  const GraphView({
+    super.key,
+    required this.data,
+    this.activityNodeId,
+    this.focusNodeId,
+    this.autoExpandAgentFocus = true,
+    this.changedEntityIds = const <String>{},
+    this.impactedTopicIds = const <String>{},
+    this.changeAnimationsEnabled = true,
+    this.runningVerificationTargetIds = const <String>{},
+    this.passedVerificationTargetIds = const <String>{},
+    this.failedVerificationTargetIds = const <String>{},
+    this.historicalEntityIds = const <String>{},
+  });
+
   final GraphData data;
+  final String? activityNodeId;
+  final String? focusNodeId;
+  final bool autoExpandAgentFocus;
+  final Set<String> changedEntityIds;
+  final Set<String> impactedTopicIds;
+  final bool changeAnimationsEnabled;
+  final Set<String> runningVerificationTargetIds;
+  final Set<String> passedVerificationTargetIds;
+  final Set<String> failedVerificationTargetIds;
+  final Set<String> historicalEntityIds;
 
   @override
   State<GraphView> createState() => _GraphViewState();
@@ -21,10 +48,9 @@ class GraphView extends StatefulWidget {
 
 class _GraphViewState extends State<GraphView>
     with SingleTickerProviderStateMixin {
-  late GraphData _data;
   Camera3d _camera = const Camera3d();
-  final Set<String> _expanded = {};
-  final Set<String> _transientActivityExpanded = {};
+  final Set<String> _expanded = <String>{};
+  final Set<String> _transientActivityExpanded = <String>{};
   final Set<String> _enabledFilters = edgeFilterKeys.toSet();
   String? _selectedId;
   Offset? _lastFocal;
@@ -32,63 +58,25 @@ class _GraphViewState extends State<GraphView>
   late final AnimationController _activityPulse;
   bool _restoreBrowserContextMenu = false;
 
-  WorkspaceLiveClient? _client;
-  Timer? _pollTimer;
-  Timer? _conversationTimer;
-  Timer? _draftDebounce;
-  RepositoryStatus? _repoStatus;
-  ResearchChange? _change;
-  VerificationState? _verification;
-  ArtifactDrift? _artifactDrift;
-  ActivityEvent? _activity;
-  final List<ActivityEvent> _activityLog = <ActivityEvent>[];
-  final List<ConversationEntry> _conversationLog = <ConversationEntry>[];
-  int _conversationRevision = 0;
-  ConversationDraft? _conversationDraft;
-  final String _conversationClientId = 'viewer:' + DateTime.now().microsecondsSinceEpoch.toString();
-  ReplayTimeline? _timeline;
-  ReplayFrame? _replayFrame;
-  ViewerSettings _settings = const ViewerSettings(
-    promptEnabled: false,
-    agentActivityEnabled: true,
-    replayEnabled: true,
-    changeAnimationsEnabled: true,
-  );
-  AdapterStatus? _adapter;
-  String? _liveError;
-  bool _probing = true;
-  bool _submitting = false;
-  final TextEditingController _promptController = TextEditingController();
   FloatingPanelDock _controlsDock = FloatingPanelDock.topRight;
   FloatingPanelDock _detailsDock = FloatingPanelDock.bottomRight;
-  FloatingPanelDock _activityDock = FloatingPanelDock.topCenter;
-  FloatingPanelDock _conversationDock = FloatingPanelDock.centerLeft;
   bool _controlsCollapsed = false;
   bool _detailsCollapsed = false;
-  bool _activityCollapsed = true;
-  bool _conversationCollapsed = true;
-  ActivitySourceLocation? _hoveredActivityLocation;
-  ActivitySourceLocation? _keptOpenActivityLocation;
 
-  Set<String> get _visibleExpanded => {
+  Set<String> get _visibleExpanded => <String>{
     ..._expanded,
     ..._transientActivityExpanded,
   };
 
   GraphScene get _scene => buildGraphScene(
-    _data,
+    widget.data,
     expanded: _visibleExpanded,
     enabledFilters: _enabledFilters,
   );
-  bool get _conversationAvailable {
-    final host = Uri.base.host.toLowerCase();
-    return host == '127.0.0.1' || host == 'localhost' || host == '::1';
-  }
 
   @override
   void initState() {
     super.initState();
-    _data = widget.data;
     if (kIsWeb && BrowserContextMenu.enabled) {
       _restoreBrowserContextMenu = true;
       unawaited(BrowserContextMenu.disableContextMenu());
@@ -97,22 +85,25 @@ class _GraphViewState extends State<GraphView>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat();
-    _probe();
+    _syncTransientActivityExpansion(widget.activityNodeId);
+    _selectedId = widget.focusNodeId;
   }
 
   @override
   void didUpdateWidget(covariant GraphView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (!identical(oldWidget.data, widget.data)) _data = widget.data;
+    if (oldWidget.data != widget.data ||
+        oldWidget.activityNodeId != widget.activityNodeId ||
+        oldWidget.autoExpandAgentFocus != widget.autoExpandAgentFocus) {
+      setState(() => _syncTransientActivityExpansion(widget.activityNodeId));
+    }
+    if (widget.focusNodeId != null && oldWidget.focusNodeId != widget.focusNodeId) {
+      setState(() => _selectedId = widget.focusNodeId);
+    }
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
-    _conversationTimer?.cancel();
-    _draftDebounce?.cancel();
-    _client?.close();
-    _promptController.dispose();
     if (kIsWeb && _restoreBrowserContextMenu) {
       unawaited(BrowserContextMenu.enableContextMenu());
     }
@@ -120,102 +111,53 @@ class _GraphViewState extends State<GraphView>
     super.dispose();
   }
 
-  Future<void> _probe() async {
-    final client = await WorkspaceLiveClient.probe();
-    if (!mounted) {
-      client?.close();
+  void _syncTransientActivityExpansion(String? targetId) {
+    _transientActivityExpanded.clear();
+    if (!widget.autoExpandAgentFocus || targetId == null || targetId.isEmpty) {
       return;
     }
-    setState(() {
-      _client = client;
-      _probing = false;
-    });
-    if (client != null) {
-      await _poll();
-      _pollTimer = Timer.periodic(const Duration(milliseconds: 2200), (_) => _poll());
-      if (_conversationAvailable) {
-        await _pollConversation();
-        _conversationTimer = Timer.periodic(const Duration(milliseconds: 1200), (_) => _pollConversation());
+
+    GraphClaim? claim;
+    GraphSourceArea? area;
+    GraphArtifact? artifact;
+    for (final candidate in widget.data.claims) {
+      if (candidate.id == targetId) {
+        claim = candidate;
+        break;
       }
     }
-  }
-
-  Future<void> _poll() async {
-    final client = _client;
-    if (client == null) return;
-    try {
-      final results = await Future.wait<Object>([
-        client.graphData(),
-        client.repositoryStatus(),
-        client.changeIntelligence(),
-        client.verificationState(),
-        client.artifactDrift(),
-        client.activity(after: _activity?.sequence ?? 0),
-        client.replayTimeline(),
-        client.viewerSettings(),
-        client.adapterStatus(),
-      ]);
-      if (!mounted) return;
-      final batch = results[5] as ActivityBatch;
-      setState(() {
-        _data = results[0] as GraphData;
-        _repoStatus = results[1] as RepositoryStatus;
-        _change = results[2] as ResearchChange;
-        _verification = results[3] as VerificationState;
-        _artifactDrift = results[4] as ArtifactDrift;
-        if (batch.events.isNotEmpty) {
-          final known = _activityLog.map((event) => event.sequence).toSet();
-          for (final event in batch.events) {
-            if (!known.contains(event.sequence)) _activityLog.add(event);
-          }
-          _activityLog.sort((a, b) => a.sequence.compareTo(b.sequence));
-          if (_activityLog.length > 80) {
-            _activityLog.removeRange(0, _activityLog.length - 80);
-          }
-          _activity = _activityLog.last;
-          _syncTransientActivityExpansion(_liveActivityFocus);
-        }
-        _timeline = results[6] as ReplayTimeline;
-        _settings = results[7] as ViewerSettings;
-        _adapter = results[8] as AdapterStatus;
-        _liveError = null;
-      });
-    } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
+    for (final candidate in widget.data.sourceAreas) {
+      if (candidate.id == targetId) {
+        area = candidate;
+        break;
+      }
     }
-  }
-
-  Future<void> _pollConversation() async {
-    final client = _client;
-    if (client == null || !_conversationAvailable) return;
-    try {
-      final snapshot = await client.conversation(after: _conversationRevision);
-      if (!mounted) return;
-      setState(() {
-        final known = _conversationLog.map((entry) => entry.revision).toSet();
-        for (final entry in snapshot.entries) {
-          if (!known.contains(entry.revision)) _conversationLog.add(entry);
-        }
-        _conversationLog.sort((a, b) => a.revision.compareTo(b.revision));
-        if (_conversationLog.length > 120) {
-          _conversationLog.removeRange(0, _conversationLog.length - 120);
-        }
-        _conversationRevision = snapshot.latestRevision;
-        _conversationDraft = snapshot.draft;
-      });
-    } catch (_) {
-      // Conversation sync is private and optional; graph/live polling remains independent.
+    for (final candidate in widget.data.artifacts) {
+      if (candidate.id == targetId) {
+        artifact = candidate;
+        break;
+      }
     }
-  }
 
-  void _scheduleDraftSync(String text) {
-    if (!_conversationAvailable || _client == null) return;
-    _draftDebounce?.cancel();
-    _draftDebounce = Timer(const Duration(milliseconds: 350), () async {
-      try {
-        await _client?.updateConversationDraft(_conversationClientId, text);
-      } catch (_) {}
-    });
+    if (artifact != null) {
+      _transientActivityExpanded.add(artifact.areaId);
+      for (final candidate in widget.data.sourceAreas) {
+        if (candidate.id == artifact.areaId) {
+          area = candidate;
+          break;
+        }
+      }
+    }
+    if (area != null) {
+      _transientActivityExpanded.add(area.claimId);
+      for (final candidate in widget.data.claims) {
+        if (candidate.id == area.claimId) {
+          claim = candidate;
+          break;
+        }
+      }
+    }
+    if (claim != null) _transientActivityExpanded.add(claim.ownerId);
   }
 
   void _reset() => setState(() {
@@ -227,9 +169,9 @@ class _GraphViewState extends State<GraphView>
   void _expandAll() => setState(() {
     _expanded
       ..clear()
-      ..addAll(_data.topics.map((x) => x.id))
-      ..addAll(_data.claims.map((x) => x.id))
-      ..addAll(_data.sourceAreas.map((x) => x.id));
+      ..addAll(widget.data.topics.map((x) => x.id))
+      ..addAll(widget.data.claims.map((x) => x.id))
+      ..addAll(widget.data.sourceAreas.map((x) => x.id));
     _camera = _camera.copyWith(zoom: .58, panX: 0, panY: 0);
   });
 
@@ -242,7 +184,7 @@ class _GraphViewState extends State<GraphView>
         if (_expanded.contains(id)) {
           _expanded.remove(id);
           if (node.kind == 'topic') {
-            for (final claim in _data.claims.where((x) => x.ownerId == id)) {
+            for (final claim in widget.data.claims.where((x) => x.ownerId == id)) {
               _expanded.remove(claim.id);
             }
           }
@@ -258,7 +200,11 @@ class _GraphViewState extends State<GraphView>
     double bestDepth = -double.infinity;
     for (final node in _scene.nodes) {
       final p = _camera.project(node.position, size);
-      final threshold = node.kind == 'root' ? 28.0 : node.kind == 'topic' ? 25.0 : 19.0;
+      final threshold = node.kind == 'root'
+          ? 28.0
+          : node.kind == 'topic'
+          ? 25.0
+          : 19.0;
       if ((p.offset - point).distance <= threshold && p.depth > bestDepth) {
         best = node.id;
         bestDepth = p.depth;
@@ -267,118 +213,12 @@ class _GraphViewState extends State<GraphView>
     return best;
   }
 
-  Future<void> _togglePrompt() async {
-    final client = _client;
-    if (client == null) return;
-    try {
-      final next = await client.updateViewerSettings(_settings.copyWith(promptEnabled: !_settings.promptEnabled));
-      if (mounted) setState(() => _settings = next);
-    } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
-    }
-  }
-
-  Future<void> _submitPrompt() async {
-    final client = _client;
-    final prompt = _promptController.text.trim();
-    if (client == null || prompt.isEmpty || _submitting || !_settings.promptEnabled) return;
-    setState(() => _submitting = true);
-    try {
-      final result = await client.submitPrompt(prompt);
-      if (!mounted) return;
-      setState(() {
-        _activity = result.event;
-        _promptController.clear();
-        _conversationDraft = null;
-        _liveError = null;
-      });
-      await _poll();
-    } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
-  }
-
-  Future<void> _selectReplay(int sequence) async {
-    final client = _client;
-    final timeline = _timeline;
-    if (client == null || timeline == null) return;
-    if (sequence >= timeline.latest) {
-      setState(() => _replayFrame = null);
-      return;
-    }
-    try {
-      final frame = await client.replayFrame(sequence);
-      if (mounted) setState(() => _replayFrame = frame);
-    } catch (error) {
-      if (mounted) setState(() => _liveError = error.toString());
-    }
-  }
-
-  void _syncTransientActivityExpansion(String? targetId) {
-    _transientActivityExpanded.clear();
-    if (targetId == null || targetId.isEmpty) return;
-
-    GraphClaim? claim;
-    GraphSourceArea? area;
-    GraphArtifact? artifact;
-
-    for (final candidate in _data.claims) {
-      if (candidate.id == targetId) {
-        claim = candidate;
-        break;
-      }
-    }
-    for (final candidate in _data.sourceAreas) {
-      if (candidate.id == targetId) {
-        area = candidate;
-        break;
-      }
-    }
-    for (final candidate in _data.artifacts) {
-      if (candidate.id == targetId) {
-        artifact = candidate;
-        break;
-      }
-    }
-
-    if (artifact != null) {
-      for (final candidate in _data.sourceAreas) {
-        if (candidate.id == artifact.areaId) {
-          area = candidate;
-          break;
-        }
-      }
-      _transientActivityExpanded.add(artifact.areaId);
-    }
-
-    if (area != null) {
-      _transientActivityExpanded.add(area.claimId);
-      for (final candidate in _data.claims) {
-        if (candidate.id == area.claimId) {
-          claim = candidate;
-          break;
-        }
-      }
-    }
-
-    if (claim != null) {
-      _transientActivityExpanded.add(claim.ownerId);
-    }
-  }
-
-  String? get _liveActivityFocus =>
-      (_keptOpenActivityLocation ?? _hoveredActivityLocation)?.semanticTarget ??
-      _activity?.focusId;
-
   KeyEventResult _handleKey(GraphScene scene, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
     final nodes = scene.nodes;
     if (nodes.isEmpty) return KeyEventResult.ignored;
-
     if (event.logicalKey == LogicalKeyboardKey.home) {
-      setState(() => _selectedId = _data.root.id);
+      setState(() => _selectedId = widget.data.root.id);
       return KeyEventResult.handled;
     }
     if (event.logicalKey == LogicalKeyboardKey.end) {
@@ -412,54 +252,6 @@ class _GraphViewState extends State<GraphView>
     return KeyEventResult.ignored;
   }
 
-  ActivitySourceLocation? _activityLocationFor(ActivityEvent event) =>
-      ActivitySourceLocation.fromEvent(event);
-
-  void _setHoveredActivityLocation(ActivitySourceLocation location, bool hovering) {
-    final same = location.matches(_hoveredActivityLocation);
-    if (hovering) {
-      if (!same) {
-        setState(() {
-          _hoveredActivityLocation = location;
-          _syncTransientActivityExpansion(_liveActivityFocus);
-        });
-      }
-    } else if (same) {
-      setState(() {
-        _hoveredActivityLocation = null;
-        _syncTransientActivityExpansion(_liveActivityFocus);
-      });
-    }
-  }
-
-  void _toggleKeptOpenActivityLocation(ActivitySourceLocation location) {
-    setState(() {
-      _keptOpenActivityLocation = location.matches(_keptOpenActivityLocation)
-          ? null
-          : location;
-      _syncTransientActivityExpansion(_liveActivityFocus);
-    });
-  }
-
-  void _showActivitySourceLocation(ActivitySourceLocation location, Rect anchor) {
-    final overlay = Overlay.of(context, rootOverlay: true).context.findRenderObject();
-    if (overlay is! RenderBox) return;
-    showMenu<void>(
-      context: context,
-      position: RelativeRect.fromRect(anchor, Offset.zero & overlay.size),
-      color: const Color(0xFF0A1826),
-      elevation: 16,
-      constraints: const BoxConstraints(maxWidth: 460),
-      items: [
-        PopupMenuItem<void>(
-          enabled: false,
-          padding: EdgeInsets.zero,
-          child: _ActivitySourceLocationPopover(location: location),
-        ),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final scene = _scene;
@@ -470,7 +262,6 @@ class _GraphViewState extends State<GraphView>
             .where((edge) => edge.from == selected.id || edge.to == selected.id)
             .toList(growable: false);
     final mediaWidth = MediaQuery.sizeOf(context).width;
-    final history = _replayFrame?.historicalEntityIds ?? const <String>{};
 
     return Stack(
       children: [
@@ -485,7 +276,10 @@ class _GraphViewState extends State<GraphView>
                   onPointerSignal: (event) {
                     if (event is PointerScrollEvent) {
                       setState(() => _camera = _camera.copyWith(
-                        zoom: (_camera.zoom * math.exp(-event.scrollDelta.dy * .001)).clamp(.32, 3.2).toDouble(),
+                        zoom: (_camera.zoom *
+                                math.exp(-event.scrollDelta.dy * .001))
+                            .clamp(.32, 3.2)
+                            .toDouble(),
                       ));
                     }
                   },
@@ -498,57 +292,61 @@ class _GraphViewState extends State<GraphView>
                   },
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                  onScaleStart: (details) {
-                    _lastFocal = details.focalPoint;
-                    _gestureZoom = _camera.zoom;
-                  },
-                  onScaleUpdate: (details) {
-                    final last = _lastFocal ?? details.focalPoint;
-                    final delta = details.focalPoint - last;
-                    setState(() {
-                      if (details.pointerCount >= 2) {
-                        _camera = _camera.copyWith(
-                          zoom: (_gestureZoom * details.scale).clamp(.32, 3.2).toDouble(),
-                          panX: _camera.panX + delta.dx,
-                          panY: _camera.panY + delta.dy,
-                        );
-                      } else {
-                        _camera = _camera.copyWith(
-                          yaw: _camera.yaw + delta.dx * .008,
-                          pitch: (_camera.pitch + delta.dy * .008).clamp(-1.28, 1.28).toDouble(),
-                        );
-                      }
+                    onScaleStart: (details) {
                       _lastFocal = details.focalPoint;
-                    });
-                  },
-                  onScaleEnd: (_) => _lastFocal = null,
-                  onTapUp: (details) {
-                    final id = _hitTest(details.localPosition, size);
-                    if (id == null) {
-                      setState(() => _selectedId = null);
-                    } else {
-                      _activate(id);
-                    }
-                  },
-                  child: CustomPaint(
-                    painter: _GraphPainter(
-                      scene: scene,
-                      camera: _camera,
-                      selectedId: _selectedId,
-                      changedEntityIds: _change?.changedEntityIds ?? const {},
-                      impactedTopicIds: _change?.impactedTopicIds ?? const {},
-                      changeAnimationsEnabled: _settings.changeAnimationsEnabled,
-                      runningVerification: _verification?.running ?? const {},
-                      passedVerification: _verification?.passed ?? const {},
-                      failedVerification: _verification?.failed ?? const {},
-                      activityNodeId: _liveActivityFocus,
-                      activityPulse: _activityPulse,
-                      historicalEntityIds: history,
+                      _gestureZoom = _camera.zoom;
+                    },
+                    onScaleUpdate: (details) {
+                      final last = _lastFocal ?? details.focalPoint;
+                      final delta = details.focalPoint - last;
+                      setState(() {
+                        if (details.pointerCount >= 2) {
+                          _camera = _camera.copyWith(
+                            zoom: (_gestureZoom * details.scale)
+                                .clamp(.32, 3.2)
+                                .toDouble(),
+                            panX: _camera.panX + delta.dx,
+                            panY: _camera.panY + delta.dy,
+                          );
+                        } else {
+                          _camera = _camera.copyWith(
+                            yaw: _camera.yaw + delta.dx * .008,
+                            pitch: (_camera.pitch + delta.dy * .008)
+                                .clamp(-1.28, 1.28)
+                                .toDouble(),
+                          );
+                        }
+                        _lastFocal = details.focalPoint;
+                      });
+                    },
+                    onScaleEnd: (_) => _lastFocal = null,
+                    onTapUp: (details) {
+                      final id = _hitTest(details.localPosition, size);
+                      if (id == null) {
+                        setState(() => _selectedId = null);
+                      } else {
+                        _activate(id);
+                      }
+                    },
+                    child: CustomPaint(
+                      painter: _GraphPainter(
+                        scene: scene,
+                        camera: _camera,
+                        selectedId: _selectedId,
+                        changedEntityIds: widget.changedEntityIds,
+                        impactedTopicIds: widget.impactedTopicIds,
+                        changeAnimationsEnabled: widget.changeAnimationsEnabled,
+                        runningVerification: widget.runningVerificationTargetIds,
+                        passedVerification: widget.passedVerificationTargetIds,
+                        failedVerification: widget.failedVerificationTargetIds,
+                        activityNodeId: widget.activityNodeId,
+                        activityPulse: _activityPulse,
+                        historicalEntityIds: widget.historicalEntityIds,
+                      ),
+                      size: Size.infinite,
                     ),
-                    size: Size.infinite,
                   ),
                 ),
-              ),
               );
             },
           ),
@@ -561,90 +359,26 @@ class _GraphViewState extends State<GraphView>
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('ResearchWorkspace', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
-                Text('3D Research Graph · ' + _data.snapshotDate, style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11)),
+                const Text('ResearchWorkspace',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                Text('3D Research Graph · ' + widget.data.snapshotDate,
+                    style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11)),
                 const SizedBox(height: 10),
                 Wrap(spacing: 7, runSpacing: 7, children: [
                   FilledButton.tonal(onPressed: _reset, child: const Text('總覽')),
                   FilledButton.tonal(onPressed: _expandAll, child: const Text('全展開')),
-                  if (_client != null)
-                    FilledButton.tonal(onPressed: _togglePrompt, child: Text(_settings.promptEnabled ? 'Prompt ON' : 'Prompt OFF')),
                 ]),
                 const SizedBox(height: 8),
                 Text(
-                  _data.topics.length.toString() + ' topics · ' +
-                  _data.claims.length.toString() + ' claims · ' +
-                  _data.evidence.length.toString() + ' evidence',
+                  widget.data.topics.length.toString() + ' topics · ' +
+                      widget.data.claims.length.toString() + ' claims · ' +
+                      widget.data.evidence.length.toString() + ' evidence',
                   style: const TextStyle(fontSize: 11, color: Color(0xFFBDD0E5)),
-                ),
-                if (_probing) const Padding(
-                  padding: EdgeInsets.only(top: 6),
-                  child: Text('LOCAL · probing', style: TextStyle(fontSize: 10, color: Color(0xFF8FA5BD))),
                 ),
               ],
             ),
           ),
         ),
-        if (_client != null)
-          Positioned(
-            top: 12,
-            left: mediaWidth > 850 ? 350 : 12,
-            child: _LiveStrip(
-              repo: _repoStatus,
-              change: _change,
-              verification: _verification,
-              artifactDrift: _artifactDrift,
-              activity: _activity,
-              adapter: _adapter,
-              error: _liveError,
-            ),
-          ),
-        if (_client != null && _conversationAvailable && (_conversationLog.isNotEmpty || _conversationDraft != null))
-          FloatingPanel(
-            title: 'Research Conversation',
-            icon: Icons.forum_outlined,
-            dock: _conversationDock,
-            collapsed: _conversationCollapsed,
-            width: math.min(430, mediaWidth - 24),
-            expandedHeight: 300,
-            onCollapsedChanged: (value) => setState(() => _conversationCollapsed = value),
-            onDockChanged: (value) => setState(() => _conversationDock = value),
-            child: ListView(
-              padding: const EdgeInsets.all(10),
-              children: [
-                if (_conversationDraft != null && _conversationDraft!.clientId != _conversationClientId)
-                  _ConversationDraftCard(draft: _conversationDraft!),
-                for (final entry in _conversationLog.reversed.take(30))
-                  _ConversationEntryCard(entry: entry),
-              ],
-            ),
-          ),
-        if (_client != null && _settings.agentActivityEnabled && _activityLog.isNotEmpty)
-          FloatingPanel(
-            title: 'Research Agent Activity',
-            icon: Icons.auto_awesome_outlined,
-            dock: _activityDock,
-            collapsed: _activityCollapsed,
-            width: math.min(430, mediaWidth - 24),
-            expandedHeight: 320,
-            onCollapsedChanged: (value) => setState(() => _activityCollapsed = value),
-            onDockChanged: (value) => setState(() => _activityDock = value),
-            child: ListView(
-              padding: const EdgeInsets.all(10),
-              children: [
-                for (final event in _activityLog.reversed.take(20))
-                  _ActivityCard(
-                    event: event,
-                    location: _activityLocationFor(event),
-                    onFocus: event.focusId == null ? null : () => _activate(event.focusId!),
-                    onLocationSelected: _showActivitySourceLocation,
-                    onLocationHoverChanged: _setHoveredActivityLocation,
-                    keptOpenLocation: _keptOpenActivityLocation,
-                    onLocationKeepOpenChanged: _toggleKeptOpenActivityLocation,
-                  ),
-              ],
-            ),
-          ),
         FloatingPanel(
           title: 'Research Relations',
           icon: Icons.tune,
@@ -652,38 +386,41 @@ class _GraphViewState extends State<GraphView>
           collapsed: _controlsCollapsed,
           width: math.min(360, mediaWidth - 24),
           expandedHeight: 300,
-          onCollapsedChanged: (value) => setState(() => _controlsCollapsed = value),
+          onCollapsedChanged: (value) =>
+              setState(() => _controlsCollapsed = value),
           onDockChanged: (value) => setState(() => _controlsDock = value),
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: 6),
             children: [
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                child: Wrap(
-                  spacing: 7,
-                  children: [
-                    TextButton(
-                      onPressed: () => setState(() {
-                        _enabledFilters
-                          ..clear()
-                          ..addAll(edgeFilterKeys);
-                      }),
-                      child: const Text('全部開啟'),
-                    ),
-                    TextButton(
-                      onPressed: () => setState(_enabledFilters.clear),
-                      child: const Text('全部關閉'),
-                    ),
-                  ],
-                ),
+                child: Wrap(spacing: 7, children: [
+                  TextButton(
+                    onPressed: () => setState(() {
+                      _enabledFilters
+                        ..clear()
+                        ..addAll(edgeFilterKeys);
+                    }),
+                    child: const Text('全部開啟'),
+                  ),
+                  TextButton(
+                    onPressed: () => setState(_enabledFilters.clear),
+                    child: const Text('全部關閉'),
+                  ),
+                ]),
               ),
               for (final key in edgeFilterKeys)
                 CheckboxListTile(
                   dense: true,
                   controlAffinity: ListTileControlAffinity.leading,
                   value: _enabledFilters.contains(key),
-                  title: Text(edgeFilterLabels[key] ?? key, style: const TextStyle(fontSize: 11)),
-                  subtitle: Text(key, style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: Color(0xFF7890A8))),
+                  title: Text(edgeFilterLabels[key] ?? key,
+                      style: const TextStyle(fontSize: 11)),
+                  subtitle: Text(key,
+                      style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 9,
+                          color: Color(0xFF7890A8))),
                   onChanged: (enabled) => setState(() {
                     if (enabled == true) {
                       _enabledFilters.add(key);
@@ -702,79 +439,71 @@ class _GraphViewState extends State<GraphView>
             dock: _detailsDock,
             collapsed: _detailsCollapsed,
             width: math.min(430, mediaWidth - 24),
-            expandedHeight: math.max(180, MediaQuery.sizeOf(context).height - 96),
-            onCollapsedChanged: (value) => setState(() => _detailsCollapsed = value),
+            expandedHeight:
+                math.max(180, MediaQuery.sizeOf(context).height - 96),
+            onCollapsedChanged: (value) =>
+                setState(() => _detailsCollapsed = value),
             onDockChanged: (value) => setState(() => _detailsDock = value),
             onClose: () => setState(() => _selectedId = null),
             child: ListView(
               padding: const EdgeInsets.all(14),
               shrinkWrap: true,
               children: [
-                Text(selected.kind.toUpperCase(), style: const TextStyle(color: Color(0xFF67E8F9), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                Text(selected.kind.toUpperCase(),
+                    style: const TextStyle(
+                        color: Color(0xFF67E8F9),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2)),
                 const SizedBox(height: 5),
-                Text(selected.label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+                Text(selected.label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 18)),
                 const SizedBox(height: 8),
-                CollapsibleMessage(text: selected.summary, style: const TextStyle(color: Color(0xFFB8C9DA), height: 1.5)),
-                if (selected.status != null) _InfoItem('STATUS · ' + selected.status!),
+                CollapsibleMessage(
+                    text: selected.summary,
+                    style: const TextStyle(
+                        color: Color(0xFFB8C9DA), height: 1.5)),
+                if (selected.status != null)
+                  _InfoItem('STATUS · ' + selected.status!),
                 if (selected.detail != null) _InfoItem(selected.detail!),
                 const SizedBox(height: 14),
                 const _SectionTitle('Visible relationships'),
                 if (relationships.isEmpty)
                   const _InfoItem('No visible relationship under current filters'),
                 for (final edge in relationships)
-                  _InfoItem(edge.type + ' · ' + edge.from + ' → ' + edge.to + '\n' + edge.label),
+                  _InfoItem(edge.type +
+                      ' · ' +
+                      edge.from +
+                      ' → ' +
+                      edge.to +
+                      '\n' +
+                      edge.label),
                 const SizedBox(height: 12),
                 Text(
-                  selected.kind == 'topic' || selected.kind == 'claim' || selected.kind == 'source-area'
-                    ? (_visibleExpanded.contains(selected.id) ? 'Expanded semantic cluster' : 'Tap again to expand semantic cluster')
-                    : 'Evidence-level node',
-                  style: const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11),
+                  selected.kind == 'topic' ||
+                          selected.kind == 'claim' ||
+                          selected.kind == 'source-area'
+                      ? (_visibleExpanded.contains(selected.id)
+                          ? 'Expanded semantic cluster'
+                          : 'Tap again to expand semantic cluster')
+                      : 'Evidence-level node',
+                  style:
+                      const TextStyle(color: Color(0xFF8FA5BD), fontSize: 11),
                 ),
               ],
             ),
           ),
-        if (_client != null && _settings.promptEnabled)
-          Positioned(
-            left: 12,
-            right: selected == null ? 12 : math.min(455, mediaWidth - 12),
-            bottom: _timeline?.hasEvents == true ? 76 : 12,
-            child: _Panel(
-              child: Row(children: [
-                Expanded(
-                  child: TextField(
-                    controller: _promptController,
-                    minLines: 1,
-                    maxLines: 3,
-                    decoration: const InputDecoration(hintText: 'Research prompt', isDense: true),
-                    onChanged: _scheduleDraftSync,
-                    onSubmitted: (_) => _submitPrompt(),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                FilledButton(onPressed: _submitting ? null : _submitPrompt, child: Text(_submitting ? '...' : '送出')),
-              ]),
+        Positioned(
+          left: 12,
+          bottom: 12,
+          child: _Panel(
+            child: const Text(
+              '左鍵/一指拖曳旋轉 · 右鍵拖曳平移 · 兩指縮放＋平移 · 滾輪縮放 · 方向鍵選取 · Enter 展開',
+              style: TextStyle(fontSize: 11, color: Color(0xFFA9BDD0)),
             ),
           ),
-        if (_client != null && _settings.replayEnabled && _timeline?.hasEvents == true)
-          Positioned(
-            left: 12,
-            right: 12,
-            bottom: 12,
-            child: _ReplayBar(
-              timeline: _timeline!,
-              frame: _replayFrame,
-              onChanged: _selectReplay,
-              onLive: () => setState(() => _replayFrame = null),
-            ),
-          ),
-        if (_client == null)
-          Positioned(
-            left: 12,
-            bottom: 12,
-            child: _Panel(
-              child: const Text('左鍵/一指拖曳旋轉 · 右鍵拖曳平移 · 兩指縮放＋平移 · 滾輪縮放 · 方向鍵選取 · Enter 展開', style: TextStyle(fontSize: 11, color: Color(0xFFA9BDD0))),
-            ),
-          ),
+        ),
       ],
     );
   }
@@ -832,260 +561,6 @@ class _InfoItem extends StatelessWidget {
   );
 }
 
-class _ConversationDraftCard extends StatelessWidget {
-  const _ConversationDraftCard({required this.draft});
-  final ConversationDraft draft;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.all(9),
-    decoration: BoxDecoration(
-      color: const Color(0xFF1E1627),
-      border: Border.all(color: const Color(0xFF6D4C78)),
-      borderRadius: BorderRadius.circular(9),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('REMOTE DRAFT', style: TextStyle(color: Color(0xFFC4B5FD), fontSize: 9, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 5),
-        CollapsibleMessage(text: draft.text, style: const TextStyle(color: Color(0xFFE9D5FF), fontSize: 11, height: 1.35)),
-      ],
-    ),
-  );
-}
-
-class _ConversationEntryCard extends StatelessWidget {
-  const _ConversationEntryCard({required this.entry});
-  final ConversationEntry entry;
-
-  @override
-  Widget build(BuildContext context) {
-    final accent = entry.kind == 'prompt'
-      ? const Color(0xFF67E8F9)
-      : entry.status == 'failed'
-      ? const Color(0xFFF87171)
-      : const Color(0xFF86EFAC);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1B29),
-        border: Border.all(color: accent.withValues(alpha: .4)),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text((entry.source + ' · ' + entry.kind).toUpperCase(), style: TextStyle(color: accent, fontSize: 9, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 5),
-          CollapsibleMessage(text: entry.text, style: const TextStyle(color: Color(0xFFD7E5F4), fontSize: 11, height: 1.35)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({
-    required this.event,
-    required this.location,
-    required this.onLocationSelected,
-    required this.onLocationHoverChanged,
-    required this.keptOpenLocation,
-    required this.onLocationKeepOpenChanged,
-    this.onFocus,
-  });
-
-  final ActivityEvent event;
-  final ActivitySourceLocation? location;
-  final VoidCallback? onFocus;
-  final void Function(ActivitySourceLocation location, Rect anchor) onLocationSelected;
-  final void Function(ActivitySourceLocation location, bool hovering) onLocationHoverChanged;
-  final ActivitySourceLocation? keptOpenLocation;
-  final ValueChanged<ActivitySourceLocation> onLocationKeepOpenChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final current = location;
-    final keptOpen = current?.matches(keptOpenLocation) ?? false;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0B1B29),
-        border: Border.all(color: keptOpen ? const Color(0xFF6D5B22) : const Color(0xFF29445A)),
-        borderRadius: BorderRadius.circular(9),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Expanded(child: Text(event.type.toUpperCase(), style: const TextStyle(color: Color(0xFF67E8F9), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: .7))),
-            Text('#' + event.sequence.toString(), style: const TextStyle(color: Color(0xFF6B8199), fontSize: 9)),
-          ]),
-          const SizedBox(height: 5),
-          CollapsibleMessage(text: event.summary, style: const TextStyle(color: Color(0xFFD7E5F4), fontSize: 11, height: 1.35)),
-          if (event.detail != null && event.detail!.trim().isNotEmpty) ...[
-            const SizedBox(height: 5),
-            CollapsibleMessage(text: event.detail!, style: const TextStyle(color: Color(0xFF9FB4CA), fontFamily: 'monospace', fontSize: 10, height: 1.3)),
-          ],
-          if (current != null) ...[
-            const SizedBox(height: 7),
-            ActivitySourceLocationCard(
-              location: current,
-              keptOpen: keptOpen,
-              onTap: (anchor) => onLocationSelected(current, anchor),
-              onKeepOpenChanged: () => onLocationKeepOpenChanged(current),
-              onHoverChanged: (hovering) => onLocationHoverChanged(current, hovering),
-            ),
-          ] else if (onFocus != null) ...[
-            const SizedBox(height: 5),
-            TextButton.icon(onPressed: onFocus, icon: const Icon(Icons.center_focus_strong, size: 14), label: Text('聚焦 ' + (event.focusId ?? 'graph'))),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivitySourceLocationPopover extends StatelessWidget {
-  const _ActivitySourceLocationPopover({required this.location});
-  final ActivitySourceLocation location;
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 420,
-    child: Padding(
-      padding: const EdgeInsets.all(14),
-      child: SelectionArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(children: [
-              Icon(Icons.edit_note_outlined, color: Color(0xFF67E8F9)),
-              SizedBox(width: 8),
-              Text('研究變更位置', style: TextStyle(fontWeight: FontWeight.w800)),
-            ]),
-            const SizedBox(height: 10),
-            const Text(
-              '這是目前 Agent Activity 的即時研究定位；位置資訊只來自事件 metadata，不額外維護第二份 modified-files 清單。',
-              style: TextStyle(fontSize: 12, height: 1.4),
-            ),
-            const SizedBox(height: 14),
-            _SourceLocationField(label: 'Repository', value: location.repository),
-            _SourceLocationField(label: '相對路徑', value: location.file),
-            for (final target in location.semanticTargets)
-              _SourceLocationField(label: '語意位置', value: target),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _SourceLocationField extends StatelessWidget {
-  const _SourceLocationField({required this.label, required this.value});
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 2),
-        SelectableText(value, style: const TextStyle(fontFamily: 'monospace', fontSize: 12, height: 1.35)),
-      ],
-    ),
-  );
-}
-
-class _LiveStrip extends StatelessWidget {
-  const _LiveStrip({required this.repo, required this.change, required this.verification, required this.artifactDrift, required this.activity, required this.adapter, required this.error});
-  final RepositoryStatus? repo;
-  final ResearchChange? change;
-  final VerificationState? verification;
-  final ArtifactDrift? artifactDrift;
-  final ActivityEvent? activity;
-  final AdapterStatus? adapter;
-  final String? error;
-
-  @override
-  Widget build(BuildContext context) => _Panel(
-    child: Wrap(
-      spacing: 8,
-      runSpacing: 6,
-      children: [
-        _Pill('LIVE LOCAL', const Color(0xFF67E8F9)),
-        if (repo != null) _Pill('REPO ' + repo!.dirtyCount.toString() + ' dirty · ' + repo!.driftCount.toString() + ' drift', const Color(0xFF93C5FD)),
-        if (change != null && (change!.changedEntityIds.isNotEmpty || change!.impactedTopicIds.isNotEmpty))
-          _Pill('CHANGE ' + change!.changedEntityIds.length.toString() + '/' + change!.impactedTopicIds.length.toString(), const Color(0xFFFBBF24)),
-        if (verification != null)
-          _Pill('VERIFY ' + verification!.passed.length.toString() + ' pass · ' + verification!.failed.length.toString() + ' fail', const Color(0xFF86EFAC)),
-        if (artifactDrift != null && artifactDrift!.driftCount > 0)
-          Tooltip(
-            message: artifactDrift!.findings.map((x) => x.message).join('\n'),
-            child: _Pill('ARTIFACT ' + artifactDrift!.driftCount.toString() + ' drift', const Color(0xFFF59E0B)),
-          ),
-        if (activity != null) _Pill('AGENT ' + activity!.type, const Color(0xFF67E8F9)),
-        if (adapter != null) _Pill(adapter!.enabled ? 'ADAPTER ready' : 'ADAPTER off', adapter!.enabled ? const Color(0xFF86EFAC) : const Color(0xFF94A3B8)),
-        if (error != null) _Pill('LOCAL API issue', const Color(0xFFF87171)),
-      ],
-    ),
-  );
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill(this.text, this.color);
-  final String text;
-  final Color color;
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-    decoration: BoxDecoration(
-      color: color.withValues(alpha: .08),
-      border: Border.all(color: color.withValues(alpha: .45)),
-      borderRadius: BorderRadius.circular(999),
-    ),
-    child: Text(text, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w700)),
-  );
-}
-
-class _ReplayBar extends StatelessWidget {
-  const _ReplayBar({required this.timeline, required this.frame, required this.onChanged, required this.onLive});
-  final ReplayTimeline timeline;
-  final ReplayFrame? frame;
-  final ValueChanged<int> onChanged;
-  final VoidCallback onLive;
-
-  @override
-  Widget build(BuildContext context) {
-    final value = (frame?.sequence ?? timeline.latest).clamp(timeline.earliest, timeline.latest);
-    return _Panel(
-      child: Row(children: [
-        Text(frame == null ? 'REPLAY · LIVE' : 'REPLAY · ' + value.toString(), style: const TextStyle(color: Color(0xFFC4B5FD), fontWeight: FontWeight.w800, fontSize: 11)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Slider(
-            min: timeline.earliest.toDouble(),
-            max: math.max(timeline.latest, timeline.earliest + 1).toDouble(),
-            value: value.toDouble().clamp(timeline.earliest.toDouble(), math.max(timeline.latest, timeline.earliest + 1).toDouble()),
-            onChanged: (_) {},
-            onChangeEnd: (v) => onChanged(v.round()),
-          ),
-        ),
-        Text(timeline.eventCount.toString() + ' events', style: const TextStyle(fontSize: 10, color: Color(0xFF9FB4CA))),
-        const SizedBox(width: 8),
-        FilledButton.tonal(onPressed: frame == null ? null : onLive, child: const Text('LIVE')),
-      ]),
-    );
-  }
-}
 
 class _GraphPainter extends CustomPainter {
   const _GraphPainter({
@@ -1284,3 +759,4 @@ class _GraphPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _GraphPainter oldDelegate) => true;
 }
+
