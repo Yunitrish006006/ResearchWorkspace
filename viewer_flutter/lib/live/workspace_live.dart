@@ -248,19 +248,115 @@ class ActivityBatch {
   );
 }
 
+class ReplayMilestone {
+  const ReplayMilestone({
+    required this.sequence,
+    required this.type,
+    this.timestamp,
+    this.taskId,
+    this.sessionId,
+    this.topicId,
+    this.summary,
+  });
+  final int sequence;
+  final String type;
+  final String? timestamp;
+  final String? taskId;
+  final String? sessionId;
+  final String? topicId;
+  final String? summary;
+
+  factory ReplayMilestone.fromJson(Map<String, dynamic> json) => ReplayMilestone(
+    sequence: (json['sequence'] as num?)?.toInt() ?? 0,
+    type: json['type'] as String? ?? 'unknown',
+    timestamp: json['timestamp'] as String?,
+    taskId: json['taskId'] as String?,
+    sessionId: json['sessionId'] as String?,
+    topicId: json['topicId'] as String?,
+    summary: json['summary'] as String?,
+  );
+}
+
+class ReplaySession {
+  const ReplaySession({
+    required this.id,
+    required this.state,
+    required this.startedSequence,
+    required this.eventCount,
+    required this.milestoneCount,
+    required this.milestones,
+    this.taskId,
+    this.endedSequence,
+    this.startedAt,
+    this.endedAt,
+    this.topicId,
+    this.claimId,
+    this.summary,
+  });
+  final String id;
+  final String state;
+  final String? taskId;
+  final int startedSequence;
+  final int? endedSequence;
+  final String? startedAt;
+  final String? endedAt;
+  final String? topicId;
+  final String? claimId;
+  final String? summary;
+  final int eventCount;
+  final int milestoneCount;
+  final List<ReplayMilestone> milestones;
+
+  factory ReplaySession.fromJson(Map<String, dynamic> json) => ReplaySession(
+    id: json['id'] as String? ?? '',
+    state: json['state'] as String? ?? 'unknown',
+    taskId: json['taskId'] as String?,
+    startedSequence: (json['startedSequence'] as num?)?.toInt() ?? 0,
+    endedSequence: (json['endedSequence'] as num?)?.toInt(),
+    startedAt: json['startedAt'] as String?,
+    endedAt: json['endedAt'] as String?,
+    topicId: json['topicId'] as String?,
+    claimId: json['claimId'] as String?,
+    summary: json['summary'] as String?,
+    eventCount: (json['eventCount'] as num?)?.toInt() ?? 0,
+    milestoneCount: (json['milestoneCount'] as num?)?.toInt() ?? 0,
+    milestones: (json['milestones'] as List? ?? const [])
+      .whereType<Map>()
+      .map((x) => ReplayMilestone.fromJson(Map<String, dynamic>.from(x)))
+      .toList(growable: false),
+  );
+}
+
 class ReplayTimeline {
-  const ReplayTimeline({required this.earliest, required this.latest, required this.eventCount, required this.checkpointCount});
+  const ReplayTimeline({
+    required this.earliest,
+    required this.latest,
+    required this.eventCount,
+    required this.checkpointCount,
+    required this.sessions,
+    required this.milestones,
+  });
   final int earliest;
   final int latest;
   final int eventCount;
   final int checkpointCount;
-  bool get hasEvents => eventCount > 0;
+  final List<ReplaySession> sessions;
+  final List<ReplayMilestone> milestones;
+  bool get hasEvents => eventCount > 0 && latest >= earliest;
 
   factory ReplayTimeline.fromJson(Map<String, dynamic> json) => ReplayTimeline(
     earliest: (json['earliestSequence'] as num?)?.toInt() ?? 0,
     latest: (json['latestSequence'] as num?)?.toInt() ?? 0,
     eventCount: (json['eventCount'] as num?)?.toInt() ?? 0,
     checkpointCount: (json['checkpointCount'] as num?)?.toInt() ?? 0,
+    sessions: (json['sessions'] as List? ?? const [])
+      .whereType<Map>()
+      .map((x) => ReplaySession.fromJson(Map<String, dynamic>.from(x)))
+      .toList(growable: false),
+    milestones: (json['milestones'] as List? ?? const [])
+      .whereType<Map>()
+      .map((x) => ReplayMilestone.fromJson(Map<String, dynamic>.from(x)))
+      .toList(growable: false),
   );
 }
 
@@ -334,30 +430,215 @@ class ViewerSettings {
   );
 }
 
+class OrchestrationAssignment {
+  const OrchestrationAssignment({
+    required this.role,
+    required this.scope,
+    required this.access,
+    required this.wave,
+  });
+  final String role;
+  final List<String> scope;
+  final String access;
+  final String wave;
+
+  factory OrchestrationAssignment.fromJson(Map<String, dynamic> json) =>
+      OrchestrationAssignment(
+        role: json['role'] as String? ?? 'unknown',
+        scope: _strings(json['scope']),
+        access: json['access'] as String? ?? 'read-only',
+        wave: json['wave'] as String? ?? 'unknown',
+      );
+}
+
+class OrchestrationSummary {
+  const OrchestrationSummary({
+    required this.mode,
+    required this.score,
+    required this.topics,
+    required this.claims,
+    required this.assignments,
+    required this.maxSubagents,
+    required this.maxParallelEvidenceExtractors,
+  });
+  final String mode;
+  final int score;
+  final List<String> topics;
+  final List<String> claims;
+  final List<OrchestrationAssignment> assignments;
+  final int maxSubagents;
+  final int maxParallelEvidenceExtractors;
+
+  factory OrchestrationSummary.fromJson(Map<String, dynamic> json) {
+    final constraints = Map<String, dynamic>.from(
+      json['constraints'] as Map? ?? const <String, dynamic>{},
+    );
+    return OrchestrationSummary(
+      mode: json['mode'] as String? ?? 'primary-only',
+      score: (json['score'] as num?)?.toInt() ?? 0,
+      topics: _strings(json['topics']),
+      claims: _strings(json['claims']),
+      assignments: (json['assignments'] as List? ?? const [])
+        .whereType<Map>()
+        .map((x) => OrchestrationAssignment.fromJson(Map<String, dynamic>.from(x)))
+        .toList(growable: false),
+      maxSubagents: (constraints['maxSubagents'] as num?)?.toInt() ?? 4,
+      maxParallelEvidenceExtractors:
+          (constraints['maxParallelEvidenceExtractors'] as num?)?.toInt() ?? 2,
+    );
+  }
+}
+
+class AgentTask {
+  const AgentTask({
+    required this.id,
+    required this.state,
+    required this.adapter,
+    this.topicId,
+    this.claimId,
+    this.threadId,
+    this.startedAt,
+    this.completedAt,
+    this.summary,
+    this.error,
+    this.finalMessage,
+    this.orchestration,
+  });
+  final String id;
+  final String state;
+  final String adapter;
+  final String? topicId;
+  final String? claimId;
+  final String? threadId;
+  final String? startedAt;
+  final String? completedAt;
+  final String? summary;
+  final String? error;
+  final String? finalMessage;
+  final OrchestrationSummary? orchestration;
+
+  factory AgentTask.fromJson(Map<String, dynamic> json) {
+    final rawOrchestration = json['orchestration'];
+    return AgentTask(
+      id: json['id'] as String? ?? '',
+      state: json['state'] as String? ?? 'unknown',
+      adapter: json['adapter'] as String? ?? '',
+      topicId: json['topicId'] as String?,
+      claimId: json['claimId'] as String?,
+      threadId: json['threadId'] as String?,
+      startedAt: json['startedAt'] as String?,
+      completedAt: json['completedAt'] as String?,
+      summary: json['summary'] as String?,
+      error: json['error'] as String?,
+      finalMessage: json['finalMessage'] as String?,
+      orchestration: rawOrchestration is Map
+          ? OrchestrationSummary.fromJson(Map<String, dynamic>.from(rawOrchestration))
+          : null,
+    );
+  }
+}
+
 class AdapterStatus {
-  const AdapterStatus({required this.enabled, required this.execution});
+  const AdapterStatus({
+    required this.enabled,
+    required this.execution,
+    required this.configured,
+    required this.available,
+    required this.busy,
+    this.kind,
+    this.version,
+    this.sandbox,
+    this.model,
+    this.reason,
+    this.currentTask,
+    this.lastTask,
+  });
   final bool enabled;
   final String execution;
-  factory AdapterStatus.fromJson(Map<String, dynamic> json) => AdapterStatus(
-    enabled: json['enabled'] as bool? ?? false,
-    execution: json['execution'] as String? ?? 'prompt-intake-only',
-  );
+  final bool configured;
+  final bool available;
+  final bool busy;
+  final String? kind;
+  final String? version;
+  final String? sandbox;
+  final String? model;
+  final String? reason;
+  final AgentTask? currentTask;
+  final AgentTask? lastTask;
+
+  String get label {
+    if (!configured) return 'ADAPTER OFF';
+    if (!available) return 'CODEX UNAVAILABLE';
+    if (busy) return 'CODEX BUSY';
+    return 'CODEX READY';
+  }
+
+  factory AdapterStatus.fromJson(Map<String, dynamic> json) {
+    AgentTask? parseTask(String key) {
+      final raw = json[key];
+      return raw is Map
+          ? AgentTask.fromJson(Map<String, dynamic>.from(raw))
+          : null;
+    }
+    return AdapterStatus(
+      enabled: json['enabled'] as bool? ?? false,
+      execution: json['execution'] as String? ?? 'prompt-intake-only',
+      configured: json['configured'] as bool? ?? false,
+      available: json['available'] as bool? ?? false,
+      busy: json['busy'] as bool? ?? false,
+      kind: json['kind'] as String?,
+      version: json['version'] as String?,
+      sandbox: json['sandbox'] as String?,
+      model: json['model'] as String?,
+      reason: json['reason'] as String?,
+      currentTask: parseTask('currentTask'),
+      lastTask: parseTask('lastTask'),
+    );
+  }
 }
 
 class PromptSubmission {
-  const PromptSubmission({required this.mode, required this.score, required this.event, required this.execution});
+  const PromptSubmission({
+    required this.mode,
+    required this.score,
+    required this.event,
+    required this.execution,
+    this.status = 'accepted',
+    this.task,
+    this.adapter,
+    this.orchestration,
+  });
   final String mode;
   final int score;
   final ActivityEvent event;
   final String execution;
+  final String status;
+  final AgentTask? task;
+  final AdapterStatus? adapter;
+  final OrchestrationSummary? orchestration;
 
   factory PromptSubmission.fromJson(Map<String, dynamic> json) {
-    final orchestration = Map<String, dynamic>.from(json['orchestration'] as Map? ?? const {});
+    final rawOrchestration = json['orchestration'];
+    final orchestration = rawOrchestration is Map
+        ? OrchestrationSummary.fromJson(
+            Map<String, dynamic>.from(rawOrchestration))
+        : null;
+    final rawTask = json['task'];
+    final rawAdapter = json['adapter'];
     return PromptSubmission(
-      mode: orchestration['mode'] as String? ?? 'primary-only',
-      score: (orchestration['score'] as num?)?.toInt() ?? 0,
-      event: ActivityEvent.fromJson(Map<String, dynamic>.from(json['event'] as Map? ?? const {})),
+      mode: orchestration?.mode ?? 'primary-only',
+      score: orchestration?.score ?? 0,
+      event: ActivityEvent.fromJson(
+        Map<String, dynamic>.from(json['event'] as Map? ?? const {})),
       execution: json['execution'] as String? ?? 'unknown',
+      status: json['status'] as String? ?? 'accepted',
+      task: rawTask is Map
+          ? AgentTask.fromJson(Map<String, dynamic>.from(rawTask))
+          : null,
+      adapter: rawAdapter is Map
+          ? AdapterStatus.fromJson(Map<String, dynamic>.from(rawAdapter))
+          : null,
+      orchestration: orchestration,
     );
   }
 }

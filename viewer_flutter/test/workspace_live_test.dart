@@ -71,4 +71,68 @@ void main() {
     await client.updateConversationDraft('viewer:test','draft text');
     client.close();
   });
+
+  test('adapter orchestration and replay sessions retain Totem-style live detail', () {
+    final adapter = AdapterStatus.fromJson({
+      'configured': true,
+      'available': true,
+      'enabled': true,
+      'busy': true,
+      'execution': 'opt-in-ready',
+      'sandbox': 'workspace-write',
+      'currentTask': {
+        'id': 'task:1',
+        'adapter': 'codex',
+        'state': 'running',
+        'topicId': 'governance',
+        'orchestration': {
+          'mode': 'guarded-parallel',
+          'score': 12,
+          'topics': ['governance', 'method'],
+          'claims': ['claim-sync'],
+          'assignments': [
+            {'role': 'methodology-analyst', 'scope': ['method'], 'access': 'read-only', 'wave': 'discovery'},
+            {'role': 'evidence-extractor', 'scope': ['governance'], 'access': 'write-one-topic', 'wave': 'extraction'},
+          ],
+          'constraints': {'maxSubagents': 4, 'maxParallelEvidenceExtractors': 2},
+        },
+      },
+    });
+    expect(adapter.busy, isTrue);
+    expect(adapter.label, 'CODEX BUSY');
+    expect(adapter.currentTask?.orchestration?.mode, 'guarded-parallel');
+    expect(adapter.currentTask?.orchestration?.assignments.length, 2);
+    expect(adapter.currentTask?.orchestration?.maxSubagents, 4);
+
+    final replay = ReplayTimeline.fromJson({
+      'earliestSequence': 1,
+      'latestSequence': 9,
+      'eventCount': 9,
+      'checkpointCount': 2,
+      'sessions': [
+        {
+          'id': 'session:task:1',
+          'taskId': 'task:1',
+          'state': 'completed',
+          'startedSequence': 1,
+          'endedSequence': 9,
+          'eventCount': 9,
+          'milestoneCount': 2,
+          'milestones': [
+            {'sequence': 1, 'type': 'task_started', 'topicId': 'governance'},
+            {'sequence': 9, 'type': 'task_completed', 'topicId': 'governance'},
+          ],
+        },
+      ],
+      'milestones': [
+        {'sequence': 1, 'type': 'task_started', 'taskId': 'task:1'},
+        {'sequence': 9, 'type': 'task_completed', 'taskId': 'task:1'},
+      ],
+    });
+    expect(replay.sessions.length, 1);
+    expect(replay.sessions.single.state, 'completed');
+    expect(replay.milestones.length, 2);
+    expect(replay.checkpointCount, 2);
+  });
+
 }

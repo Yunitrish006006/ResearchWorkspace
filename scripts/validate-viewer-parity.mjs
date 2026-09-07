@@ -30,6 +30,9 @@ assert.ok(flutter.includes("final changePulse = changeAnimationsEnabled"));
 assert.ok(flutterHost.includes("WorkspaceLiveClient"));
 assert.ok(flutterHost.includes("_pollConversation"));
 assert.ok(flutterHost.includes("_selectReplay"));
+for(const token of ["OrchestrationSummary","currentTask","lastTask","CODEX BUSY","sessions.length","milestones.length"]){
+  assert.ok((flutterLive+flutterHost).includes(token),"Flutter live status parity missing "+token);
+}
 assert.ok(!flutter.includes("WorkspaceLiveClient"),"GraphView must not own transport polling");
 assert.ok(!flutter.includes("Timer.periodic"),"GraphView must remain renderer-only");
 assert.ok(legacy.includes("artifact.driftCount"));

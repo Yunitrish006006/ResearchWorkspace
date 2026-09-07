@@ -28,6 +28,7 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
   VerificationState? _verification;
   ArtifactDrift? _artifactDrift;
   AdapterStatus? _adapter;
+  OrchestrationSummary? _orchestration;
   ViewerSettings _settings = const ViewerSettings(
     promptEnabled: false,
     agentActivityEnabled: true,
@@ -159,6 +160,10 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         _timeline = results[6] as ReplayTimeline;
         _settings = results[7] as ViewerSettings;
         _adapter = results[8] as AdapterStatus;
+        _orchestration =
+            _adapter?.currentTask?.orchestration ??
+            _adapter?.lastTask?.orchestration ??
+            _orchestration;
         _liveError = null;
       });
     } catch (error) {
@@ -236,6 +241,8 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         }
         _promptController.clear();
         _conversationDraft = null;
+        _adapter = result.adapter ?? _adapter;
+        _orchestration = result.orchestration ?? result.task?.orchestration ?? _orchestration;
         _liveError = null;
       });
       await _poll();
@@ -351,6 +358,8 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
               artifactDrift: _artifactDrift,
               activity: displayedActivity,
               adapter: _adapter,
+              orchestration: _orchestration,
+              replay: _timeline,
               promptEnabled: _settings.promptEnabled,
               error: _liveError,
               onPromptToggle: _togglePrompt,
@@ -471,6 +480,8 @@ class _WorkspaceStatusPanel extends StatelessWidget {
     required this.artifactDrift,
     required this.activity,
     required this.adapter,
+    required this.orchestration,
+    required this.replay,
     required this.promptEnabled,
     required this.error,
     required this.onPromptToggle,
@@ -483,6 +494,8 @@ class _WorkspaceStatusPanel extends StatelessWidget {
   final ArtifactDrift? artifactDrift;
   final ActivityEvent? activity;
   final AdapterStatus? adapter;
+  final OrchestrationSummary? orchestration;
+  final ReplayTimeline? replay;
   final bool promptEnabled;
   final String? error;
   final VoidCallback onPromptToggle;
@@ -535,10 +548,35 @@ class _WorkspaceStatusPanel extends StatelessWidget {
         if (activity != null)
           _Pill('AGENT ' + activity!.type, const Color(0xFF67E8F9)),
         if (adapter != null)
-          _Pill(adapter!.enabled ? 'ADAPTER ready' : 'ADAPTER off',
-              adapter!.enabled
-                  ? const Color(0xFF86EFAC)
-                  : const Color(0xFF94A3B8)),
+          _Pill(
+            adapter!.label,
+            adapter!.busy
+                ? const Color(0xFFFBBF24)
+                : adapter!.available
+                ? const Color(0xFF86EFAC)
+                : const Color(0xFF94A3B8),
+          ),
+        if (orchestration != null)
+          _Pill(
+            'ORCH ' +
+                orchestration!.mode +
+                ' · ' +
+                orchestration!.score.toString() +
+                ' · ' +
+                orchestration!.assignments.length.toString() +
+                '/' +
+                orchestration!.maxSubagents.toString(),
+            const Color(0xFFC4B5FD),
+          ),
+        if (replay != null && replay!.hasEvents)
+          _Pill(
+            'REPLAY ' +
+                replay!.sessions.length.toString() +
+                ' sessions · ' +
+                replay!.milestones.length.toString() +
+                ' milestones',
+            const Color(0xFFA5B4FC),
+          ),
         if (error != null)
           const _Pill('LOCAL API issue', Color(0xFFF87171)),
         FilledButton.tonal(
@@ -784,9 +822,18 @@ class _ReplayBar extends StatelessWidget {
               onChangeEnd: (v) => onChanged(v.round()),
             ),
           ),
-          Text(timeline.eventCount.toString() + ' events',
-              style:
-                  const TextStyle(fontSize: 10, color: Color(0xFF9FB4CA))),
+          Text(
+            timeline.eventCount.toString() +
+                ' events · ' +
+                timeline.checkpointCount.toString() +
+                ' cp · ' +
+                timeline.sessions.length.toString() +
+                ' sessions · ' +
+                timeline.milestones.length.toString() +
+                ' milestones',
+            style: const TextStyle(
+                fontSize: 10, color: Color(0xFF9FB4CA)),
+          ),
           const SizedBox(width: 8),
           FilledButton.tonal(
               onPressed: frame == null ? null : onLive,
