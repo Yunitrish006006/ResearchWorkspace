@@ -56,6 +56,10 @@ for(const token of ["sourceAreas","artifacts","GraphSourceArea","GraphArtifact"]
 assert.ok(flutterScene.includes("data.sourceAreas"));
 assert.ok(flutterScene.includes("data.artifacts"));
 assert.ok(flutterScene.includes("expanded.contains(area.id)"));
+for(const token of ["edgeFilterKeys","edgeFilterLabels","enabledFilters"]){
+  assert.ok(flutterScene.includes(token),"Flutter relationship-filter scene contract missing "+token);
+  assert.ok(flutter.includes(token),"Flutter relationship-filter UI contract missing "+token);
+}
 assert.ok(legacyGraph.includes("sourceAreas"));
 assert.ok(legacyGraph.includes("artifacts"));
 assert.ok(legacyGraph.includes("expanded.has(area.id)"));

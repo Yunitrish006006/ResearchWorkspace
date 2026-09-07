@@ -2,6 +2,22 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'graph_data.dart';
 
+const edgeFilterKeys = <String>[
+  'supports',
+  'uses-method',
+  'grounded-in',
+  'validated-by',
+  'limits',
+];
+
+const edgeFilterLabels = <String, String>{
+  'supports': 'Evidence supports',
+  'uses-method': 'Uses method',
+  'grounded-in': 'Grounded in',
+  'validated-by': 'Validated by',
+  'limits': 'Limits / boundary',
+};
+
 class Vec3 {
   const Vec3(this.x, this.y, this.z);
   final double x;
@@ -125,7 +141,17 @@ Vec3 _scatter(Vec3 parent, String id, String kind, double radius) {
 
 VisualNode? _firstNode(Iterable<VisualNode> nodes) => nodes.isEmpty ? null : nodes.first;
 
-GraphScene buildGraphScene(GraphData data, {Set<String> expanded = const {}}) {
+GraphScene buildGraphScene(
+  GraphData data, {
+  Set<String> expanded = const {},
+  Set<String> enabledFilters = const {
+    'supports',
+    'uses-method',
+    'grounded-in',
+    'validated-by',
+    'limits',
+  },
+}) {
   final nodes = <VisualNode>[
     VisualNode(id: data.root.id, kind: 'root', label: data.root.name, summary: data.root.summary, position: const Vec3(0, 0, 0)),
   ];
@@ -184,7 +210,9 @@ GraphScene buildGraphScene(GraphData data, {Set<String> expanded = const {}}) {
         ownerId: claim.id,
         detail: item.kind,
       ));
-      edges.add(VisualEdge(id: 'study:' + item.id, from: claim.id, to: item.id, type: 'uses-method', label: item.kind));
+      if (enabledFilters.contains('uses-method')) {
+        edges.add(VisualEdge(id: 'study:' + item.id, from: claim.id, to: item.id, type: 'uses-method', label: item.kind));
+      }
     }
     for (final item in evidence) {
       nodes.add(VisualNode(
@@ -196,7 +224,9 @@ GraphScene buildGraphScene(GraphData data, {Set<String> expanded = const {}}) {
         ownerId: claim.id,
         detail: item.evidenceClass + ' · ' + item.path,
       ));
-      edges.add(VisualEdge(id: 'evidence:' + item.id, from: item.id, to: claim.id, type: 'supports', label: item.evidenceClass));
+      if (enabledFilters.contains('supports')) {
+        edges.add(VisualEdge(id: 'evidence:' + item.id, from: item.id, to: claim.id, type: 'supports', label: item.evidenceClass));
+      }
     }
     for (final item in reviews) {
       nodes.add(VisualNode(
@@ -208,7 +238,9 @@ GraphScene buildGraphScene(GraphData data, {Set<String> expanded = const {}}) {
         ownerId: claim.id,
         status: item.status,
       ));
-      edges.add(VisualEdge(id: 'review:' + item.id, from: claim.id, to: item.id, type: 'validated-by', label: item.status));
+      if (enabledFilters.contains('validated-by')) {
+        edges.add(VisualEdge(id: 'review:' + item.id, from: claim.id, to: item.id, type: 'validated-by', label: item.status));
+      }
     }
     for (final area in sourceAreas) {
       nodes.add(VisualNode(
@@ -248,7 +280,8 @@ GraphScene buildGraphScene(GraphData data, {Set<String> expanded = const {}}) {
 
   final ids = nodes.map((x) => x.id).toSet();
   for (final rel in data.relations) {
-    if (ids.contains(rel.from) && ids.contains(rel.to)) {
+    final hierarchy = rel.type == 'contains' || rel.type == 'detail';
+    if (ids.contains(rel.from) && ids.contains(rel.to) && (hierarchy || enabledFilters.contains(rel.type))) {
       edges.add(VisualEdge(id: rel.id, from: rel.from, to: rel.to, type: rel.type, label: rel.label));
     }
   }

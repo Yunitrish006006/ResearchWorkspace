@@ -22,4 +22,28 @@ void main() {
     expect(l3.nodes.map((x) => x.id), containsAll(['s', 'a']));
     expect(buildGraphScene(data, expanded: {'t', 'c', 'a'}).nodes.map((x) => x.id), contains('f'));
   });
+
+  test('edge filters remove disabled research relationship families while keeping hierarchy', () {
+    const data = GraphData(
+      snapshotDate: 'test',
+      root: GraphRoot(id: 'thesis', name: 'Thesis', summary: ''),
+      topics: [GraphTopic(id: 't', name: 'Topic', summary: '', rankHint: 1)],
+      claims: [GraphClaim(id: 'c', ownerId: 't', title: 'Claim', summary: '', status: 'SUPPORTED')],
+      studies: [GraphStudy(id: 's', claimId: 'c', title: 'Method', kind: 'METHOD', summary: '')],
+      evidence: [GraphEvidence(id: 'e', claimId: 'c', title: 'Evidence', summary: '', path: 'e.md', evidenceClass: 'controlled')],
+      reviews: [GraphReview(id: 'r', claimId: 'c', title: 'Review', summary: '', status: 'PASS')],
+      sourceAreas: [],
+      artifacts: [],
+      relations: [],
+    );
+    final filtered = buildGraphScene(
+      data,
+      expanded: {'t', 'c'},
+      enabledFilters: {'validated-by'},
+    );
+    expect(filtered.edges.any((edge) => edge.type == 'supports'), isFalse);
+    expect(filtered.edges.any((edge) => edge.type == 'uses-method'), isFalse);
+    expect(filtered.edges.any((edge) => edge.type == 'validated-by'), isTrue);
+    expect(filtered.edges.any((edge) => edge.type == 'contains'), isTrue);
+  });
 }

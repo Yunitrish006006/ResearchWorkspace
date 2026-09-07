@@ -21,6 +21,7 @@ class _GraphViewState extends State<GraphView> {
   late GraphData _data;
   Camera3d _camera = const Camera3d();
   final Set<String> _expanded = {};
+  final Set<String> _enabledFilters = edgeFilterKeys.toSet();
   String? _selectedId;
   Offset? _lastFocal;
   double _gestureZoom = 1.02;
@@ -52,16 +53,22 @@ class _GraphViewState extends State<GraphView> {
   bool _probing = true;
   bool _submitting = false;
   final TextEditingController _promptController = TextEditingController();
-  FloatingPanelDock _detailsDock = FloatingPanelDock.topRight;
+  FloatingPanelDock _controlsDock = FloatingPanelDock.topRight;
+  FloatingPanelDock _detailsDock = FloatingPanelDock.bottomRight;
   FloatingPanelDock _activityDock = FloatingPanelDock.topCenter;
   FloatingPanelDock _conversationDock = FloatingPanelDock.centerLeft;
+  bool _controlsCollapsed = false;
   bool _detailsCollapsed = false;
   bool _activityCollapsed = true;
   bool _conversationCollapsed = true;
   ActivitySourceLocation? _hoveredActivityLocation;
   ActivitySourceLocation? _keptOpenActivityLocation;
 
-  GraphScene get _scene => buildGraphScene(_data, expanded: _expanded);
+  GraphScene get _scene => buildGraphScene(
+    _data,
+    expanded: _expanded,
+    enabledFilters: _enabledFilters,
+  );
   bool get _conversationAvailable {
     final host = Uri.base.host.toLowerCase();
     return host == '127.0.0.1' || host == 'localhost' || host == '::1';
@@ -487,6 +494,56 @@ class _GraphViewState extends State<GraphView> {
               ],
             ),
           ),
+        FloatingPanel(
+          title: 'Research Relations',
+          icon: Icons.tune,
+          dock: _controlsDock,
+          collapsed: _controlsCollapsed,
+          width: math.min(360, mediaWidth - 24),
+          expandedHeight: 300,
+          onCollapsedChanged: (value) => setState(() => _controlsCollapsed = value),
+          onDockChanged: (value) => setState(() => _controlsDock = value),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                child: Wrap(
+                  spacing: 7,
+                  children: [
+                    TextButton(
+                      onPressed: () => setState(() {
+                        _enabledFilters
+                          ..clear()
+                          ..addAll(edgeFilterKeys);
+                      }),
+                      child: const Text('全部開啟'),
+                    ),
+                    TextButton(
+                      onPressed: () => setState(_enabledFilters.clear),
+                      child: const Text('全部關閉'),
+                    ),
+                  ],
+                ),
+              ),
+              for (final key in edgeFilterKeys)
+                CheckboxListTile(
+                  dense: true,
+                  controlAffinity: ListTileControlAffinity.leading,
+                  value: _enabledFilters.contains(key),
+                  title: Text(edgeFilterLabels[key] ?? key, style: const TextStyle(fontSize: 11)),
+                  subtitle: Text(key, style: const TextStyle(fontFamily: 'monospace', fontSize: 9, color: Color(0xFF7890A8))),
+                  onChanged: (enabled) => setState(() {
+                    if (enabled == true) {
+                      _enabledFilters.add(key);
+                    } else {
+                      _enabledFilters.remove(key);
+                    }
+                  }),
+                ),
+            ],
+          ),
+        ),
         if (selected != null)
           FloatingPanel(
             title: selected.label,
