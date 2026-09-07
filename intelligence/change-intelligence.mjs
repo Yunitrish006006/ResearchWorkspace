@@ -68,7 +68,7 @@ export function collectGitChanges({
   for (const repository of knowledge.repositories) {
     const cwd = roots[repository.id];
     if (!cwd || !fs.existsSync(path.join(cwd, ".git"))) continue;
-    const raw = git(["status", "--porcelain=v1", "-z"], cwd);
+    const raw = git(["status", "--porcelain=v1", "-z", "--untracked-files=all"], cwd);
     if (raw == null) continue;
     results.push(...parseGitStatusPorcelain(raw, {
       repositoryId: repository.id,
