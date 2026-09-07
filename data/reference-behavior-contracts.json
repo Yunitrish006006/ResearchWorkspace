@@ -49,12 +49,27 @@
         "kSecondaryMouseButton",
         "LogicalKeyboardKey",
         "activityPulse",
-        "Visible relationships",
-        "_relationAwareScatter"
+        "Visible relationships"
       ],
       "researchForbidden": [
         "WorkspaceLiveClient",
         "Timer.periodic"
+      ]
+    },
+    {
+      "id": "semantic-placement-is-relation-aware",
+      "referencePath": "viewer_flutter/lib/model/graph_scene.dart",
+      "researchPath": "viewer_flutter/lib/model/graph_scene.dart",
+      "referenceTokens": [
+        "_relationAwareScatter",
+        "relationAware",
+        "enabledFilters"
+      ],
+      "researchTokens": [
+        "_relationAwareScatter",
+        "_claimRelationHints",
+        "_relationWeight",
+        "enabledFilters"
       ]
     },
     {
