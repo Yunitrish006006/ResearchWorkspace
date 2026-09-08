@@ -88,6 +88,11 @@ maintained copy of the thesis.
 
 ## Quick start
 
+The thesis checkout may be a sibling named `Three-Factor-Digital-Twin` or
+`school`. `RESEARCH_THESIS_REPO` explicitly overrides automatic discovery.
+The active enclosure research and E15 record live in the canonical thesis
+checkout; see its `openspec/changes/confirm-bmc-temporal-transfer-e15/evidence.md`.
+
 ```bash
 node scripts/validate-all.mjs
 node scripts/research-intelligence.mjs summary

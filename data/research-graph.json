@@ -5,7 +5,16 @@
     "thesisRepository": "Yunitrish006006/Three-Factor-Digital-Twin",
     "thesisCommit": "ea1d9194c8252e81cae2fe6842fa4064bab97397",
     "referenceRepository": "Yunitrish006006/TotemWorkspace",
-    "referenceCommit": "7145982b91bada1817ea8175f9d60076c7f1ffd2"
+    "referenceCommit": "7145982b91bada1817ea8175f9d60076c7f1ffd2",
+    "supplementalAudits": [
+      {
+        "date": "2026-09-07",
+        "topicId": "enclosure",
+        "thesisBaseCommit": "5f81939eb02e8250831b54ca1a7356a4beba5601",
+        "source": "openspec/changes/confirm-bmc-temporal-transfer-e15/evidence.md",
+        "note": "E15 supplement; earlier topics retain their original snapshot provenance."
+      }
+    ]
   },
   "root": {
     "id": "thesis",
@@ -54,6 +63,12 @@
       "name": "Research Governance",
       "summary": "Claim-to-evidence traceability, artifact synchronization and OpenSpec boundaries.",
       "rankHint": 2
+    },
+    {
+      "id": "enclosure",
+      "name": "Computer Enclosure Virtual Sensing",
+      "summary": "Active application direction: sparse enclosure temperature sensing; public BMC confirmation precedes desktop-PC NTC measurements.",
+      "rankHint": 1
     }
   ],
   "claims": [
@@ -197,6 +212,27 @@
         "AGENTS.md",
         "docs/thesis/thesis_sync_status_zh.md"
       ]
+    },
+    {
+      "id": "claim-e15",
+      "ownerId": "enclosure",
+      "title": "Frozen BMC same-server temporal confirmation",
+      "summary": "E15 supports H-ENC-08 within one public server dataset: 14 files, 3112 rows, MAE 1.6939 to 0.9744 C, 12/14 wins; two adverse runs retained.",
+      "status": "SUPPORTED",
+      "sources": [
+        "openspec/changes/confirm-bmc-temporal-transfer-e15/evidence.md",
+        "scripts/run_bmc_confirmation_e15.py"
+      ]
+    },
+    {
+      "id": "claim-pc-enclosure",
+      "ownerId": "enclosure",
+      "title": "Desktop-PC enclosure and NTC validation",
+      "summary": "Desktop-PC multi-point temperature, NTC hardware accuracy, cross-server and spatial-field transfer remain unverified.",
+      "status": "NOT_SUPPORTED",
+      "sources": [
+        "openspec/changes/confirm-bmc-temporal-transfer-e15/evidence.md"
+      ]
     }
   ],
   "studies": [
@@ -248,6 +284,13 @@
       "title": "E8 before/after intervention",
       "kind": "PROTOCOL",
       "summary": "Future causal validation protocol; no completed causal summary yet."
+    },
+    {
+      "id": "study-e15",
+      "claimId": "claim-e15",
+      "title": "E15 frozen BMC temporal/workload confirmation",
+      "kind": "EXPERIMENT",
+      "summary": "One preserved attempt on 2026-09-07, all 10 gates passed; no refit or file substitution."
     }
   ],
   "evidence": [
@@ -314,6 +357,14 @@
       "summary": "Records known synchronization gaps.",
       "path": "docs/thesis/thesis_sync_status_zh.md",
       "evidenceClass": "governance"
+    },
+    {
+      "id": "ev-e15",
+      "claimId": "claim-e15",
+      "title": "E15 complete result and provenance",
+      "summary": "Canonical school record preserves metrics, all runs, failed run comparisons and hashes.",
+      "path": "openspec/changes/confirm-bmc-temporal-transfer-e15/artifacts/bmc_confirmation_e15_result.json",
+      "evidenceClass": "public benchmark"
     }
   ],
   "reviews": [
@@ -358,6 +409,20 @@
       "title": "Artifact sync incomplete",
       "status": "WARN",
       "summary": "Markdown / IEEE / PPT / claim-evidence synchronization has known incomplete items."
+    },
+    {
+      "id": "review-e15",
+      "claimId": "claim-e15",
+      "title": "E15 bounded confirmation",
+      "status": "PASS",
+      "summary": "Ten gates passed; supports same-server temporal/workload transfer only."
+    },
+    {
+      "id": "review-pc-enclosure",
+      "claimId": "claim-pc-enclosure",
+      "title": "Physical enclosure evidence missing",
+      "status": "WARN",
+      "summary": "No desktop-PC NTC or full spatial-field validation has been executed."
     }
   ],
   "relations": [

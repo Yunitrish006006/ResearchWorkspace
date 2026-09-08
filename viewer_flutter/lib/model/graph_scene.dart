@@ -3,6 +3,10 @@ import 'dart:ui';
 import 'graph_data.dart';
 
 const edgeFilterKeys = <String>[
+  'cites',
+  'compares',
+  'argues',
+  'uses-data',
   'supports',
   'uses-method',
   'grounded-in',
@@ -11,6 +15,10 @@ const edgeFilterKeys = <String>[
 ];
 
 const edgeFilterLabels = <String, String>{
+  'cites': '引用',
+  'compares': '比較（較佳／較差／持平／不可比）',
+  'argues': '論證依據',
+  'uses-data': '使用資料集',
   'supports': 'Evidence supports',
   'uses-method': 'Uses method',
   'grounded-in': 'Grounded in',
@@ -88,11 +96,12 @@ class VisualNode {
   final String? ownerId;
   final String? status;
   final String? detail;
-  bool get isChild => kind != 'root' && kind != 'topic';
+  bool get isChild => kind != 'root' && kind != 'topic' && kind != 'paper';
 }
 
 class VisualEdge {
-  const VisualEdge({required this.id, required this.from, required this.to, required this.type, required this.label});
+  const VisualEdge({required this.id, required this.from, required this.to, required this.type, required this.label, this.outcome});
+  final String? outcome;
   final String id;
   final String from;
   final String to;
@@ -243,7 +252,9 @@ Vec3 _relationAwareScatter(
 GraphScene buildGraphScene(
   GraphData data, {
   Set<String> expanded = const {},
+  bool paperFirst = true,
   Set<String> enabledFilters = const {
+    'cites', 'compares', 'argues', 'uses-data',
     'supports',
     'uses-method',
     'grounded-in',
@@ -251,6 +262,7 @@ GraphScene buildGraphScene(
     'limits',
   },
 }) {
+  if (paperFirst && data.paperNodes.isNotEmpty) return buildPaperScene(data, expanded: expanded, enabledFilters: enabledFilters);
   final nodes = <VisualNode>[
     VisualNode(id: data.root.id, kind: 'root', label: data.root.name, summary: data.root.summary, position: const Vec3(0, 0, 0)),
   ];
@@ -397,4 +409,47 @@ GraphScene buildGraphScene(
     }
   }
   return GraphScene(nodes: List.unmodifiable(nodes), edges: List.unmodifiable(edges), clusters: List.unmodifiable(clusters));
+}
+
+GraphScene buildPaperScene(GraphData data, {Set<String> expanded = const {}, Set<String> enabledFilters = const {'cites', 'compares', 'argues', 'uses-method', 'uses-data'}}) {
+  final all = {for (final n in data.paperNodes) n.id: n};
+  final children = <String, List<PaperNode>>{};
+  for (final n in data.paperNodes) {
+    if (n.parentId != null) (children[n.parentId!] ??= []).add(n);
+  }
+  final nodes = <VisualNode>[];
+  final clusters = <VisualCluster>[];
+  void visit(PaperNode n, Vec3 position, int depth) {
+    nodes.add(VisualNode(id:n.id, kind:n.kind, label:n.label, summary:n.summary, position:position, ownerId:n.parentId, status:n.status, detail:n.detail));
+    if (!expanded.contains(n.id)) return;
+    final owned = children[n.id] ?? const <PaperNode>[];
+    final radius = math.max(48.0, 230.0 / (depth + 1));
+    if (owned.isNotEmpty) clusters.add(VisualCluster(ownerId:n.id,radius:radius,childCount:owned.length));
+    for (var i=0;i<owned.length;i++) { visit(owned[i],position + _fib(i,owned.length,radius),depth+1); }
+  }
+  final papers=data.paperNodes.where((n)=>n.parentId==null).toList();
+  for(var i=0;i<papers.length;i++) {
+    visit(papers[i],i==0?Vec3.zero:_fib(i-1,papers.length-1,360),0);
+  }
+  final visible=nodes.map((n)=>n.id).toSet();
+  String? ancestor(String id) {
+    final seen=<String>{};
+    String? current=id;
+    while(current!=null && seen.add(current)) {
+      if(visible.contains(current)) return current;
+      current=all[current]?.parentId;
+    }
+    return null;
+  }
+  final edges=<VisualEdge>[];
+  final emitted=<String>{};
+  for(final r in data.paperRelations) {
+    if(r.type!='contains' && !enabledFilters.contains(r.type)) continue;
+    final from=ancestor(r.from),to=ancestor(r.to);
+    if(from==null||to==null||from==to) continue;
+    final key='$from|$to|${r.type}|${r.outcome}';
+    if(!emitted.add(key)) continue;
+    edges.add(VisualEdge(id:r.id,from:from,to:to,type:r.type,label:r.label,outcome:r.outcome));
+  }
+  return GraphScene(nodes:nodes,edges:edges,clusters:clusters);
 }

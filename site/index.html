@@ -31,9 +31,14 @@
     <button id="overview" type="button">總覽</button>
     <button id="expandAll3d" type="button">全展開</button>
     <div class="filter-wrap">
-      <button id="edgeFilters" type="button" aria-expanded="false" aria-controls="edgeFilterPanel">線條 6/6</button>
+      <button id="paperMode" type="button">研究治理視圖</button>
+      <button id="edgeFilters" type="button" aria-expanded="false" aria-controls="edgeFilterPanel">線條 10/10</button>
       <div id="edgeFilterPanel" class="edge-filter" hidden>
         <b>研究關係</b>
+        <label><input type="checkbox" data-edge-filter="cites" checked>引用</label>
+        <label><input type="checkbox" data-edge-filter="compares" checked>比較（較佳／較差／持平／不可比）</label>
+        <label><input type="checkbox" data-edge-filter="argues" checked>論證</label>
+        <label><input type="checkbox" data-edge-filter="uses-data" checked>使用資料集</label>
         <label><input type="checkbox" data-edge-filter="contains" checked><i class="dot contains"></i>Contains</label>
         <label><input type="checkbox" data-edge-filter="supports" checked><i class="dot supports"></i>Supports</label>
         <label><input type="checkbox" data-edge-filter="uses-method" checked><i class="dot method"></i>Uses method</label>

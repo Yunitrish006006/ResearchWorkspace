@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 const scripts=[
- "validate-workspace.mjs","validate-relationship-audit.mjs","validate-graph-view-model.mjs","validate-source-layer.mjs","validate-orchestration.mjs","validate-semantic-lod.mjs","validate-viewer-parity.mjs",
+ "validate-paper-graph.mjs","validate-boptest-graph.mjs","validate-workspace.mjs","validate-relationship-audit.mjs","validate-graph-view-model.mjs","validate-source-layer.mjs","validate-orchestration.mjs","validate-semantic-lod.mjs","validate-viewer-parity.mjs",
  "validate-verification-graph.mjs","validate-verification-telemetry.mjs","validate-change-intelligence.mjs","validate-replay.mjs",
  "validate-agent-adapter.mjs","validate-conversation-sync.mjs","validate-mcp.mjs",
  "validate-local-viewer.mjs","validate-totem-parity.mjs","validate-reference-surface.mjs","validate-repository-integration.mjs","validate-artifact-drift.mjs","validate-source-mapping.mjs",

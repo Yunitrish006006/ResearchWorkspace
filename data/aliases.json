@@ -145,6 +145,46 @@
       "claim-public",
       "claim-persistence",
       "public benchmark"
+    ],
+    "機箱": [
+      "enclosure",
+      "claim-e15",
+      "claim-pc-enclosure",
+      "BMC",
+      "E15",
+      "computer enclosure"
+    ],
+    "電腦機箱": [
+      "enclosure",
+      "claim-e15",
+      "claim-pc-enclosure",
+      "BMC",
+      "E15",
+      "computer enclosure"
+    ],
+    "bmc": [
+      "enclosure",
+      "claim-e15",
+      "claim-pc-enclosure",
+      "BMC",
+      "E15",
+      "computer enclosure"
+    ],
+    "e15": [
+      "enclosure",
+      "claim-e15",
+      "claim-pc-enclosure",
+      "BMC",
+      "E15",
+      "computer enclosure"
+    ],
+    "ntc": [
+      "enclosure",
+      "claim-e15",
+      "claim-pc-enclosure",
+      "BMC",
+      "E15",
+      "computer enclosure"
     ]
   }
 }

@@ -1,4 +1,4 @@
-window.__RESEARCH_GRAPH_DATA__ = {
+{
   "schemaVersion": 3,
   "paperGraph": {
     "schemaVersion": 1,
@@ -139153,7 +139153,7 @@ window.__RESEARCH_GRAPH_DATA__ = {
   ],
   "sourceLayer": {
     "schemaVersion": 1,
-    "generatedAt": "2026-09-08T14:53:09.716Z",
+    "generatedAt": "2026-09-08T14:53:12.551Z",
     "sourceIndexed": true
   },
   "relations": [
@@ -139755,4 +139755,4 @@ window.__RESEARCH_GRAPH_DATA__ = {
       }
     ]
   }
-};
+}

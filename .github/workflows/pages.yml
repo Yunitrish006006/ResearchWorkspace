@@ -19,10 +19,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Validate ResearchWorkspace
-        run: node scripts/validate-all.mjs
       - name: Clone canonical thesis repository
         run: git clone --depth=100 --single-branch --branch main https://github.com/Yunitrish006006/Three-Factor-Digital-Twin.git ../Three-Factor-Digital-Twin
+      - name: Validate ResearchWorkspace
+        run: node scripts/validate-all.mjs
       - name: Build latest source index and shared graph assets
         env:
           RESEARCH_THESIS_REPO: ${{ github.workspace }}/../Three-Factor-Digital-Twin

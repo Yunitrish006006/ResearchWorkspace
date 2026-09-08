@@ -77,6 +77,15 @@
         "claim-persistence"
       ],
       "evidenceClass": "public benchmark"
+    },
+    {
+      "id": "E15",
+      "title": "Frozen BMC temporal confirmation",
+      "status": "REPRODUCIBLE",
+      "claimIds": [
+        "claim-e15"
+      ],
+      "evidenceClass": "public benchmark"
     }
   ]
 }
