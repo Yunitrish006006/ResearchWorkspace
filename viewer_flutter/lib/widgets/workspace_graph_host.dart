@@ -203,10 +203,12 @@ class _WorkspaceGraphHostState extends State<WorkspaceGraphHost> {
         _liveErrorSource = null;
       });
     } catch (error) {
-      if (mounted) setState(() {
-        _liveError = error.toString();
-        _liveErrorSource = 'initial';
-      });
+      if (mounted) {
+        setState(() {
+          _liveError = error.toString();
+          _liveErrorSource = 'initial';
+        });
+      }
     }
   }
 
