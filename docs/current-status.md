@@ -4,7 +4,7 @@ Status date: 2026-09-06
 
 ## Current thesis handoff (2026-09-21)
 
-- Current canonical thesis HEAD: `db32d2d14c027dec5b0277a0e099d0e56ee3d5d7` (weekly tuning-standardization explanation and action-conditioned prediction result clarified)
+- Current canonical thesis HEAD: `278ab6d36417abdcc635ca83476edd78fa66abd1` (DigitalTwinModel action-ranking demo added to weekly report)
 - Research route artifacts remain owned by the thesis checkout:
   - `docs/research/api_candidate_comparison_2026-09-21_zh.md`
   - `docs/research/systematic_parameter_tuning_protocol_2026-09-21_zh.md`
