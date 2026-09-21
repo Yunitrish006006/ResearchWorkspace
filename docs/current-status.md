@@ -4,7 +4,7 @@ Status date: 2026-09-06
 
 ## Current thesis handoff (2026-09-21)
 
-- Current canonical thesis HEAD: `add7118c5ba8f98946f80bb8fc2d15e380e7b2f2`
+- Current canonical thesis HEAD: `05eb02097f9f5f86db2f2981b5c32dca5563e02f`
 - Research route artifacts remain owned by the thesis checkout:
   - `docs/research/api_candidate_comparison_2026-09-21_zh.md`
   - `docs/research/systematic_parameter_tuning_protocol_2026-09-21_zh.md`
