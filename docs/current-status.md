@@ -4,13 +4,13 @@ Status date: 2026-09-06
 
 ## Current thesis handoff (2026-09-21)
 
-- Current canonical thesis HEAD: `df1d6ca7445459f9c599d189df3633d6ed1314e5` (weekly report wording and scope corrected)
+- Current canonical thesis HEAD: `f20d2c495b662f8824d495fba86d8dc12a238321` (action-conditioned trace replay added; weekly report updated)
 - Research route artifacts remain owned by the thesis checkout:
   - `docs/research/api_candidate_comparison_2026-09-21_zh.md`
   - `docs/research/systematic_parameter_tuning_protocol_2026-09-21_zh.md`
   - `openspec/changes/systematic-parameter-tuning-20260921/`
   - `docs/reports/professor_catchup_report_2026-09-21_zh.html`
-- Current evidence status: API comparison and protocol are complete; TCLab simulation smoke test passes with repeatable hashes; Linux BOPTEST locked validation/holdout passes for one FMU on two new dates against fixed PI; the gate decision keeps E8 intervention `NOT_EVALUATED` pending more testcases/seeds; toy, simulation, and BOPTEST artifacts remain non-causal evidence.
+- Current evidence status: API comparison and protocol are complete; TCLab simulation smoke test passes with repeatable hashes; Linux BOPTEST locked validation/holdout passes for one FMU on two new dates against fixed PI; exploratory action-conditioned replay of 200 sampled locked-trace states matched the predeclared one-step tracking expectation in 111 cases (55.5%), so E8 intervention remains `NOT_EVALUATED` pending more testcase/seed action-outcome evidence; toy, simulation, replay, and BOPTEST artifacts remain non-causal evidence.
 - The audited graph snapshot below remains historical by design; generated views should expose the current thesis HEAD and snapshot drift rather than silently rewriting audit provenance.
 
 ## Audited upstream baselines
