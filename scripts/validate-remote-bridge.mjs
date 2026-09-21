@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
 const file=new URL("../tools/remote/bridge.sh",import.meta.url);
 const source=fs.readFileSync(file,"utf8");
 const syntax=spawnSync("bash",["-n",fileURLToPath(file)],{encoding:"utf8"});
