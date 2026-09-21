@@ -4,7 +4,7 @@ Status date: 2026-09-06
 
 ## Current thesis handoff (2026-09-21)
 
-- Current canonical thesis HEAD: `994c8255c47044c65c645e50a4d8e2730e5e94e7` (chassis model parameter adaptation protocol and weekly-report explanation added)
+- Current canonical thesis HEAD: `48cbee4c388a45de9d214530c2874bf4d3a62f2a` (chassis model parameter adaptation protocol and weekly-report demonstration added)
 - Research route artifacts remain owned by the thesis checkout:
   - `docs/research/api_candidate_comparison_2026-09-21_zh.md`
   - `docs/research/systematic_parameter_tuning_protocol_2026-09-21_zh.md`
