@@ -3,10 +3,14 @@ on:
   push:
     paths:
       - "tools/codex-discord/**"
+      - "intelligence/**"
+      - "data/**"
       - ".github/workflows/codex-discord.yml"
   pull_request:
     paths:
       - "tools/codex-discord/**"
+      - "intelligence/**"
+      - "data/**"
       - ".github/workflows/codex-discord.yml"
   workflow_dispatch:
 permissions:

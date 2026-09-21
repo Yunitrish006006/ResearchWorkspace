@@ -1,4 +1,5 @@
 import { loadKnowledge, resolveTask, impactAnalysis } from "./research-knowledge.mjs";
+import { applyModelTiering, modelTieringConfiguration, researchRisk } from "./model-tiering.mjs";
 
 export const MAX_SUBAGENTS = 4;
 export const MAX_PARALLEL_EXTRACTORS = 2;
@@ -16,7 +17,8 @@ export function buildOrchestrationPlan({
   claimId = null,
   changedTopics = [],
   changedFiles = [],
-  knowledge = loadKnowledge()
+  knowledge = loadKnowledge(),
+  modelConfig = modelTieringConfiguration()
 }) {
   const resolution = resolveTask(query, knowledge);
   const impact = impactAnalysis({ changedFiles, changedTopics }, knowledge);
@@ -35,7 +37,7 @@ export function buildOrchestrationPlan({
   const evidenceBreadth = knowledge.evidence.filter((x) => claims.includes(x.claimId)).length;
   const relationSurface = knowledge.relations.filter((x) => claims.includes(x.from) || claims.includes(x.to)).length;
   const verificationBreadth = knowledge.verificationChecks.filter((x) => x.claimIds.some((id) => claims.includes(id))).length;
-  const highRisk = /causal|control|intervention|因果|控制|介入/i.test(query) ? 2 : 0;
+  const highRisk = researchRisk(query) ? 2 : 0;
   const routingUncertainty = resolution.topics.every((x) => x.score === 0) ? 2 : 0;
   const score = Math.min(20,
     Math.max(0, topics.length - 1) * 2 +
@@ -55,7 +57,8 @@ export function buildOrchestrationPlan({
     assignments.unshift({ role:"methodology-analyst", access:"read-only", scope:topics.slice(0, 3), wave:"discovery" });
   }
   if (["bounded-parallel","guarded-parallel"].includes(mode)) {
-    for (const topic of topics.slice(0, MAX_PARALLEL_EXTRACTORS)) {
+    // Reserve one slot for independent review, including guarded plans.
+    for (const topic of topics.slice(0, Math.min(MAX_PARALLEL_EXTRACTORS, MAX_SUBAGENTS - assignments.length - 1))) {
       assignments.push({ role:"evidence-extractor", access:"write-one-topic", scope:[topic], wave:"extraction" });
     }
   }
@@ -63,9 +66,10 @@ export function buildOrchestrationPlan({
     assignments.push({ role:"independent-reviewer", access:"read-only", scope:topics.slice(0, 3), wave:"review" });
   }
 
-  return Object.freeze({
+  return applyModelTiering({
     query,
     score,
+    routingUncertainty: Boolean(routingUncertainty),
     mode,
     topics,
     claims,
@@ -76,5 +80,5 @@ export function buildOrchestrationPlan({
       maxParallelEvidenceExtractors:MAX_PARALLEL_EXTRACTORS,
       primaryFallback:"Execute the same waves sequentially when multi-agent execution is unavailable."
     }
-  });
+  }, { config: modelConfig });
 }

@@ -12,7 +12,10 @@ const CHUNK_LINES=120;
 const OVERLAP_LINES=20;
 
 export function thesisRoot(){
-  return path.resolve(process.env.RESEARCH_THESIS_REPO||path.join(workspaceRoot,"..","Three-Factor-Digital-Twin"));
+  if(process.env.RESEARCH_THESIS_REPO)return path.resolve(process.env.RESEARCH_THESIS_REPO);
+  const conventional=path.join(workspaceRoot,"..","Three-Factor-Digital-Twin");
+  const school=path.join(workspaceRoot,"..","school");
+  return fs.existsSync(conventional)?conventional:fs.existsSync(school)?school:conventional;
 }
 function normalizePath(value){return String(value||"").replaceAll("\\","/").replace(/^\.\//,"")}
 function supported(relativePath){return TEXT_EXTENSIONS.has(path.extname(relativePath).toLowerCase())}

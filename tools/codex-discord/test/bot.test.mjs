@@ -98,6 +98,18 @@ test("file and current subagent activity stays live but is omitted from final pr
   assert.deepEqual(retainedProgress, []);
 });
 
+test("subagent progress does not invent a model when Codex omits it", async () => {
+  const edits = [];
+  const progress = createProgressReporter({
+    workspaceName:"research", task:"Review evidence", model:"gpt-6-astra", progressLines:3,
+    edit:async (payload) => edits.push(payload)
+  });
+  progress.update({ method:"item/completed", params:{ item:{ id:"unknown-model", type:"collabAgentToolCall", tool:"spawnAgent", status:"completed" } } });
+  await progress.finish();
+  assert.match(edits.at(-1).content, /subagent：模型未回報/);
+  assert.doesNotMatch(edits.at(-1).content, /spark|subagent：gpt-/);
+});
+
 test("only a task owner can reply to that task's persistent status card", () => {
   const activeTask = {
     statusMessageId: "status-1",

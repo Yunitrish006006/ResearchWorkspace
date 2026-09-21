@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
-import { approvalResponse, CODING_SUBAGENT_MODEL, CodexRunner, finalAgentMessage, generatedImagePaths, imageInputs, isAutoApprovedResearchValidation, threadResumeParams, threadStartParams, turnStartParams, turnSteerParams, validateModel, validatePrompt, validateReasoningEffort } from "../src/codex-runner.mjs";
+import { approvalResponse, CodexRunner, finalAgentMessage, generatedImagePaths, imageInputs, isAutoApprovedResearchValidation, threadResumeParams, threadStartParams, turnStartParams, turnSteerParams, validateModel, validatePrompt, validateReasoningEffort } from "../src/codex-runner.mjs";
 import { taskKey } from "../src/session-store.mjs";
 
 test("Codex App Server sessions always confine writes to the selected workspace", () => {
@@ -64,6 +64,35 @@ test("Codex App Server sessions always confine writes to the selected workspace"
   assert.equal(Object.hasOwn(steer, "model"), false);
   assert.equal(Object.hasOwn(steer, "sandboxPolicy"), false);
 });
+
+for (const resumeSessionId of [null, "saved-tier-thread"]) {
+  test(`model tiers reach ${resumeSessionId ? "resumed" : "new"} Discord threads without replacing the selected primary`, async () => {
+    let sessionRequest, turnRequest;
+    const child = new FakeAppServer((request, respond, notify) => {
+      if (request.method === "initialize") respond({ id:request.id, result:{} });
+      else if (["thread/start", "thread/resume"].includes(request.method)) {
+        sessionRequest = request;
+        respond({ id:request.id, result:{ thread:{ id:"tier-thread" } } });
+      } else if (request.method === "turn/start") {
+        turnRequest = request;
+        respond({ id:request.id, result:{ turn:{ id:"tier-turn" } } });
+        notify({ method:"turn/completed", params:{ turn:{ status:"completed", items:[] } } });
+      }
+    });
+    const runner = new CodexRunner({ maxRuntimeMs:5000, spawnImpl:() => child });
+    await runner.execute({ key:"tier-test", workspace:"/srv/research", prompt:"causal intervention methodology public benchmark review", model:"gpt-5.6-sol", reasoningEffort:"low", resumeSessionId });
+    assert.equal(sessionRequest.method, resumeSessionId ? "thread/resume" : "thread/start");
+    assert.equal(sessionRequest.params.model, "gpt-5.6-sol");
+    assert.equal(turnRequest.params.model, "gpt-5.6-sol");
+    assert.equal(turnRequest.params.effort, "low");
+    assert.match(sessionRequest.params.developerInstructions, /primary=gpt-5.6-sol; effort=low/);
+    assert.match(sessionRequest.params.developerInstructions, /literature-scout: model=gpt-5.6-luna/);
+    assert.match(sessionRequest.params.developerInstructions, /methodology-analyst: model=gpt-6-astra/);
+    assert.match(sessionRequest.params.developerInstructions, /independent-reviewer: model=gpt-6-astra/);
+    assert.match(sessionRequest.params.developerInstructions, /access=read-only/);
+    assert.equal(turnRequest.params.input[0].text, "causal intervention methodology public benchmark review");
+  });
+}
 
 test("approval responses are scoped and never auto-grant unrequested permissions", () => {
   const command = { kind: "command", availableDecisions: ["accept", "decline"] };

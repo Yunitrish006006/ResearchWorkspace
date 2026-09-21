@@ -5,6 +5,7 @@ import path from "node:path";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadToolSurface, toolSurfaceStatus } from "../intelligence/tool-status.mjs";
+import { adapterConfiguration, buildCodexArgs } from "../intelligence/agent-adapter.mjs";
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),"..");
 const manifest=loadToolSurface();
@@ -48,7 +49,10 @@ for(const route of ["/api/conversation","/api/conversation/prompt","/api/convers
 }
 const adapter=source("intelligence/agent-adapter.mjs");
 assert.ok(adapter.includes('["exec","--json","--skip-git-repo-check","--sandbox",config.sandbox,"--cd",config.cwd]'));
-assert.ok(adapter.includes('child.stdin?.end?.(promptEnvelope'));
+assert.match(adapter,/child\.stdin\?\.end\?\.\(execution\.stdin\)/);
+const invocation=buildCodexArgs({prompt:"Validate prompt envelope",config:adapterConfiguration({RESEARCH_AGENT_ADAPTER:"codex",RESEARCH_MODEL_TIERING:"off"})});
+assert.match(invocation.stdin,/ResearchWorkspace local Codex agent adapter/);
+assert.match(invocation.stdin,/User request:\nValidate prompt envelope$/);
 assert.ok(!/args\.push\(\s*["']--full-auto["']/.test(adapter),"adapter must not append --full-auto");
 assert.ok(!/args\.push\(\s*["']--dangerously-bypass-approvals-and-sandbox["']/.test(adapter),"adapter must not append dangerous sandbox bypass");
 assert.ok(!/const args\s*=\s*\[[^\]]*--full-auto/s.test(adapter),"adapter argv must not contain --full-auto");

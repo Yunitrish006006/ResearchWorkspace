@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
+import { buildOrchestrationPlan } from "../../../intelligence/orchestration-plan.mjs";
+import { applyModelTiering, modelTieringConfiguration, modelTieringInstructions } from "../../../intelligence/model-tiering.mjs";
 
 const MAX_PROMPT_LENGTH = 6_000;
 const MAX_IMAGE_INPUTS = 4;
@@ -8,8 +10,6 @@ const REASONING_EFFORT_NAME = /^[a-zA-Z][a-zA-Z0-9_-]{0,79}$/;
 const MAX_ERROR_LENGTH = 8_000;
 const MODEL_LIST_TIMEOUT_MS = 15_000;
 const MODEL_LIST_PAGE_SIZE = 100;
-export const CODING_SUBAGENT_MODEL = "gpt-5.3-codex-spark";
-const CODING_SUBAGENT_REASONING_EFFORT = "medium";
 const DISCORD_DEVELOPER_INSTRUCTIONS = `\nYou are the primary research-engineering lead and orchestrator for tasks sent through ResearchWorkspace CodexDiscord.\nInspect AGENTS.md, the ResearchWorkspace graph, the canonical thesis repository, OpenSpec, experiment registries, Claim-to-Evidence mappings, source provenance, and current repository state before making assumptions.\n\nTreat ResearchWorkspace and Three-Factor-Digital-Twin as one research system with distinct ownership: ResearchWorkspace owns cross-artifact intelligence and orchestration; the thesis repository owns manuscript, experiments, methods, figures, outputs, and thesis-facing artifacts.\n\nChoose subagents dynamically and use the minimum useful set. Map roles to Literature Scout, Methodology Analyst, Evidence Extractor, Independent Reviewer, and Research Synthesizer. Read-heavy investigation and methodology review are read-only. Evidence Extractors must have one bounded Topic write scope. Do not exceed four subagents or two parallel Evidence Extractors. For primary-only work, do not spawn subagents. If multi-agent execution is unavailable, preserve the same waves sequentially.\n\nMaintain scientific evidence boundaries. Never conflate synthetic full-field evidence, real target-point evidence, public task-aligned benchmarks, and intervention evidence. Do not strengthen a Claim beyond its registered Evidence and Verification state. Negative results, strong baselines, missing intervention evidence, and artifact drift must remain visible.\n\nFor changes affecting methods, experiments, metrics, figures, results, or manuscript claims, identify impacted Claims and downstream thesis-facing artifacts before editing. Use existing validators, experiment scripts, tests, and reproducibility checks. Do not report success when relevant validation failed; distinguish pre-existing failures from failures introduced by the task.\n\nThe primary coordinator owns final correctness: review resulting diffs, evidence provenance, Claim-to-Evidence traceability, and synchronization across thesis Markdown, IEEE manuscript, figures, and presentation artifacts when those surfaces are affected.\n\nKeep the final Discord response concise: summarize the result, affected Topics/Claims/artifacts, validation performed, evidence limitations, and important remaining risks. Do not expose secrets, absolute local paths, hidden reasoning, or raw subagent conversations.\n`.trim();
 const RESEARCH_VALIDATION_COMMANDS = new Set([
   "node scripts/validate-all.mjs",
@@ -58,21 +58,21 @@ export function imageInputs(imageUrls = []) {
   });
 }
 
-export function threadStartParams({ workspace, model = null }) {
+export function threadStartParams({ workspace, model = null, orchestrationPlan = null }) {
   return compactObject({
     cwd: workspace,
     runtimeWorkspaceRoots: [workspace],
     approvalPolicy: "on-request",
     approvalsReviewer: "user",
     sandbox: "workspace-write",
-    developerInstructions: DISCORD_DEVELOPER_INSTRUCTIONS,
+    developerInstructions: [DISCORD_DEVELOPER_INSTRUCTIONS, ...modelTieringInstructions(orchestrationPlan)].join("\n"),
     model
   });
 }
 
-export function threadResumeParams({ threadId, workspace, model = null }) {
+export function threadResumeParams({ threadId, workspace, model = null, orchestrationPlan = null }) {
   if (typeof threadId !== "string" || !threadId.trim()) throw new Error("Saved Codex session ID is invalid");
-  return compactObject({ threadId, ...threadStartParams({ workspace, model }) });
+  return compactObject({ threadId, ...threadStartParams({ workspace, model, orchestrationPlan }) });
 }
 
 export function turnStartParams({ threadId, workspace, prompt, model = null, reasoningEffort = null, imageUrls = [] }) {
@@ -546,6 +546,13 @@ export class CodexRunner {
     const safeReasoningEffort = validateReasoningEffort(reasoningEffort);
     const safeImageUrls = imageInputs(imageUrls).map((image) => image.url);
 
+    // Discord's explicit model (including its local-default choice) owns the
+    // primary. Planned subagents share the same policy as CLI/MCP/Local Bridge.
+    const modelConfig = modelTieringConfiguration();
+    const orchestrationPlan = applyModelTiering(buildOrchestrationPlan({ query: safePrompt, modelConfig }), {
+      config: modelConfig, model: safeModel, effort: safeReasoningEffort, preserveDefault: true
+    });
+
     return await new Promise((resolve, reject) => {
       let child;
       try {
@@ -705,7 +712,7 @@ export class CodexRunner {
         });
       };
       const startNewThread = () => {
-        request("thread/start", threadStartParams({ workspace, model: safeModel }), (message) => {
+        request("thread/start", threadStartParams({ workspace, model: safeModel, orchestrationPlan }), (message) => {
           if (message.error) {
             fail(rpcError(message));
             return;
@@ -723,7 +730,7 @@ export class CodexRunner {
           startNewThread();
           return;
         }
-        request("thread/resume", threadResumeParams({ threadId: resumeSessionId, workspace, model: safeModel }), (message) => {
+        request("thread/resume", threadResumeParams({ threadId: resumeSessionId, workspace, model: safeModel, orchestrationPlan }), (message) => {
           if (message.error) {
             resetSavedSession = true;
             safeProgress({ method: "bridge/sessionReset", params: { reason: "The saved session could not be resumed." } });

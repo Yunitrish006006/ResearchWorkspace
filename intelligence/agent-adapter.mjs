@@ -2,6 +2,8 @@ import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
 import { workspaceRoot as defaultWorkspaceRoot, loadKnowledge } from "./research-knowledge.mjs";
 import { thesisRoot as defaultThesisRoot } from "./source-index.mjs";
+import { buildOrchestrationPlan } from "./orchestration-plan.mjs";
+import { applyModelTiering, modelName, modelTieringConfiguration, modelTieringInstructions, reasoningEffort } from "./model-tiering.mjs";
 
 const ADAPTER_SCHEMA_VERSION=2;
 const ALLOWED_SANDBOXES=new Set(["read-only","workspace-write"]);
@@ -34,7 +36,7 @@ function publicTask(task){
     topicId:task.topicId??null,claimId:task.claimId??null,threadId:task.threadId??null,
     startedAt:task.startedAt,completedAt:task.completedAt??null,summary:task.summary??null,
     error:task.error??null,finalMessage:task.finalMessage??null,usage:task.usage??null,
-    orchestration:task.orchestration??null
+    orchestration:task.orchestration??null,modelSelection:task.orchestration?.primary??null
   });
 }
 function normalizedUsage(raw={}){
@@ -83,6 +85,7 @@ export function promptEnvelope(request){
   if(request.topicId)lines.push("Semantic Topic focus: "+request.topicId);
   if(request.claimId)lines.push("Semantic Claim focus: "+request.claimId);
   lines.push(...orchestrationEnvelope(request.orchestrationPlan));
+  lines.push(...modelTieringInstructions(request.orchestrationPlan));
   lines.push("","User request:",request.prompt);
   return lines.join("\n");
 }
@@ -93,17 +96,24 @@ export function adapterConfiguration(env=process.env,{workspaceRoot=defaultWorks
   const cwd=safeCwd(env.RESEARCH_CODEX_CWD,{workspaceRoot,thesisRoot});
   return Object.freeze({
     configuredKind,codexBin:boundedText(env.RESEARCH_CODEX_BIN,512)??"codex",
-    cwd,sandbox,model:boundedText(env.RESEARCH_CODEX_MODEL,128),
+    cwd,sandbox,model:modelName(env.RESEARCH_CODEX_MODEL),
+    reasoningEffort:reasoningEffort(env.RESEARCH_CODEX_REASONING_EFFORT),modelTiering:modelTieringConfiguration(env),
     workspaceRoot:path.resolve(workspaceRoot),thesisRoot:path.resolve(thesisRoot)
   });
 }
-export function buildCodexArgs({prompt,config}){
+export function buildCodexArgs({prompt,config,orchestrationPlan=null,topicId=null,claimId=null}){
   if(!config||config.configuredKind!=="codex")throw new Error("Codex adapter is not enabled");
+  const modelConfig=config.modelTiering??modelTieringConfiguration({});
+  const plan=applyModelTiering(
+    {...(orchestrationPlan??buildOrchestrationPlan({query:prompt,topicId,claimId,modelConfig})),query:prompt},
+    {config:modelConfig,model:config.model,effort:config.reasoningEffort}
+  );
   const args=["exec","--json","--skip-git-repo-check","--sandbox",config.sandbox,"--cd",config.cwd];
-  if(config.model)args.push("--model",config.model);
+  if(plan.primary.model)args.push("--model",plan.primary.model);
+  if(plan.primary.reasoningEffort)args.push("-c",`model_reasoning_effort=${JSON.stringify(plan.primary.reasoningEffort)}`);
   args.push("-");
   if(args.includes("--full-auto")||args.some((x)=>/dangerously|bypass/i.test(x)))throw new Error("Unsafe Codex flag rejected");
-  return Object.freeze({executable:config.codexBin,args,stdin:promptEnvelope({prompt})});
+  return Object.freeze({executable:config.codexBin,args,stdin:promptEnvelope({prompt,topicId,claimId,orchestrationPlan:plan}),orchestrationPlan:plan});
 }
 function itemOf(event){
   if(!event||typeof event!=="object")return null;
@@ -175,7 +185,8 @@ export function createAgentAdapter({
     return Object.freeze({
       schemaVersion:ADAPTER_SCHEMA_VERSION,kind:state.configuredKind,configured:state.configuredKind==="codex",
       available:state.available,enabled:state.configuredKind==="codex"&&state.available,busy:Boolean(state.activeTask),
-      version:state.version,sandbox:config.sandbox,model:config.model??null,reason:state.reason,
+      version:state.version,sandbox:config.sandbox,model:config.model??null,reasoningEffort:config.reasoningEffort??null,
+      modelTiering:config.modelTiering??null,reason:state.reason,
       execution:state.available?"opt-in-ready":"prompt-intake-only",
       currentTask:publicTask(state.activeTask),lastTask:publicTask(state.lastTask)
     });
@@ -250,15 +261,16 @@ export function createAgentAdapter({
     if(!state.available){const e=new Error(state.reason||"agent adapter is unavailable");e.code="ADAPTER_UNAVAILABLE";throw e}
     if(state.activeTask){const e=new Error("agent is busy with "+state.activeTask.id);e.code="AGENT_BUSY";throw e}
     const prompt=boundedText(request.prompt,8*1024);if(!prompt){const e=new Error("prompt is required");e.code="INVALID_PROMPT";throw e}
+    // Only host configuration chooses model/effort. Request-level overrides are ignored.
+    const execution=buildCodexArgs({prompt,config,orchestrationPlan:request.orchestrationPlan,topicId:request.topicId,claimId:request.claimId});
     const task={
       id:"task:"+Date.now()+":"+(++state.counter),adapter:"codex",state:"starting",
       topicId:boundedText(request.topicId,128),claimId:boundedText(request.claimId,160),threadId:null,
       startedAt:nowIso(),completedAt:null,summary:boundedText(request.summary??prompt,220),error:null,finalMessage:null,usage:null,
-      orchestration:request.orchestrationPlan??null,settled:false
+      orchestration:execution.orchestrationPlan,settled:false
     };
     state.activeTask=task;
-    const args=["exec","--json","--skip-git-repo-check","--sandbox",config.sandbox,"--cd",config.cwd];
-    if(config.model)args.push("--model",config.model);args.push("-");
+    const args=execution.args;
     let child;
     try{child=spawnImpl(config.codexBin,args,{cwd:config.cwd,env,stdio:["pipe","pipe","pipe"],windowsHide:true})}
     catch(error){state.activeTask=null;task.state="failed";task.completedAt=nowIso();task.error=sanitizeMessage(error instanceof Error?error.message:String(error),[workspaceRoot,thesisRoot]);state.lastTask=task;const wrapped=new Error(task.error);wrapped.code="ADAPTER_SPAWN_FAILED";throw wrapped}
@@ -272,7 +284,7 @@ export function createAgentAdapter({
     child.stderr?.on?.("data",(chunk)=>{if(stderrBuffer.length<4000)stderrBuffer+=String(chunk).slice(0,4000-stderrBuffer.length)});
     child.on?.("error",(error)=>void settle(task,"failed",error instanceof Error?error.message:String(error)));
     child.on?.("close",(code)=>{consume(stdoutBuffer);if(task.settled)return;if(Number(code)===0)void settle(task,"completed");else void settle(task,"failed",stderrBuffer||"codex exited with "+code)});
-    child.stdin?.end?.(promptEnvelope({...request,prompt}));
+    child.stdin?.end?.(execution.stdin);
     return publicTask(task);
   }
   function close(reason="Bridge stopped"){

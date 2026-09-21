@@ -37,3 +37,9 @@ The sync token must match `RESEARCH_CONVERSATION_SYNC_TOKEN` used by
 Security contracts are retained from TotemWorkspace: explicit user/channel/workspace allowlists, loopback-only
 workspace sync, no arbitrary host path supplied by Discord, no dangerous sandbox bypass flags, and task-scoped
 approval state.
+
+Model tiering uses the shared [ResearchWorkspace policy](../../docs/model-tiering.md).
+The primary retains the selected model/reasoning depth (or local default).
+New and resumed threads receive per-role model assignments in their developer
+instructions. Subagent progress shows the model actually reported by Codex;
+missing model telemetry is displayed as unknown, never inferred from the plan.

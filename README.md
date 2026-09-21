@@ -53,6 +53,7 @@ contracts are ported; their domain meaning is replaced.
   - `guarded-parallel`
 - maximum four subagents and two parallel Evidence Extractors;
 - audience-specific Context Packs;
+- shared role/task-based [model tiering](docs/model-tiering.md), including Local Bridge execution and Discord role instructions;
 - Claim-to-Evidence Matrix;
 - Claim Verification Graph and live verification telemetry;
 - Research Change Intelligence;
@@ -86,7 +87,25 @@ The parity ledger is `data/totem-parity.json`.
 ResearchWorkspace indexes and relates those artifacts; it does not create a second manually
 maintained copy of the thesis.
 
+## Project memory
+
+Durable, user-confirmed preferences and working procedures are maintained in
+[`data/project-memory/`](data/project-memory/README.md), separate from the
+disposable `.research-index/` cache. Agents must explicitly read the matching
+entry as directed by [`AGENTS.md`](AGENTS.md); Context Packs do not currently
+inject these entries automatically.
+
+The [professor-report workflow](data/project-memory/professor-report-workflow_zh.md)
+records first-person narration, catch-up coverage, research problems and
+simulation API discovery, evidence checks, and offline HTML quality assurance.
+Report artifacts themselves remain in the canonical thesis checkout.
+
 ## Quick start
+
+The thesis checkout may be a sibling named `Three-Factor-Digital-Twin` or
+`school`. `RESEARCH_THESIS_REPO` explicitly overrides automatic discovery.
+The active enclosure research and E15 record live in the canonical thesis
+checkout; see its `openspec/changes/confirm-bmc-temporal-transfer-e15/evidence.md`.
 
 ```bash
 node scripts/validate-all.mjs

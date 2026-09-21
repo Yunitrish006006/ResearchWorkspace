@@ -115,7 +115,7 @@ async function submitPrompt(data,{source="viewer",clientMessageId=null}={}){
   try{
     const task=agentAdapter.dispatch({prompt,topicId:data.topicId??null,claimId:data.claimId??null,summary:event.summary,orchestrationPlan:plan});
     conversation.linkTask(task.id,conversationId);
-    return{status:202,payload:{status:"accepted",execution:"codex",event,task,adapter:agentAdapter.status(),orchestration:plan,conversation:conversationEntry}};
+    return{status:202,payload:{status:"accepted",execution:"codex",event,task,adapter:agentAdapter.status(),orchestration:task.orchestration,conversation:conversationEntry}};
   }catch(error){
     const code=error?.code,status=code==="AGENT_BUSY"?409:code==="INVALID_PROMPT"?400:503;
     conversation.append({source:"workspace",kind:"status",text:code==="AGENT_BUSY"?"Codex is already working on another prompt":"Codex could not start this prompt",status:code==="AGENT_BUSY"?"busy":"failed",conversationId});

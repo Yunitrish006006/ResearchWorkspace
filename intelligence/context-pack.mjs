@@ -1,6 +1,7 @@
 import { loadKnowledge, resolveTask, graphForTopic } from "./research-knowledge.mjs";
 import { buildOrchestrationPlan } from "./orchestration-plan.mjs";
 import { searchSources } from "./source-index.mjs";
+import { modelTieringConfiguration, researchRisk, selectRoleModel } from "./model-tiering.mjs";
 
 const aliases = Object.freeze({
   primary:"research-synthesizer",
@@ -25,11 +26,12 @@ export function buildContextPack(query, {
   topicId = null,
   maxTokens = 8000,
   includeSources = true,
-  knowledge = loadKnowledge()
+  knowledge = loadKnowledge(),
+  modelConfig = modelTieringConfiguration()
 } = {}) {
   const role = normalizeAudience(audience);
   const resolution = resolveTask(query, knowledge);
-  const plan = buildOrchestrationPlan({ query, topicId, knowledge });
+  const plan = buildOrchestrationPlan({ query, topicId, knowledge, modelConfig });
   const selectedTopics = topicId ? [topicId] : resolution.topics.map((x) => x.id).slice(0, role === "evidence-extractor" ? 1 : 3);
   const graphs = selectedTopics.map((id) => graphForTopic(id, { depth:2, knowledge }));
   const sourceSearch = includeSources ? searchSources(query, { limit: role === "literature-scout" ? 16 : 10 }) : { results:[] };
@@ -38,7 +40,8 @@ export function buildContextPack(query, {
     query,
     audience:role,
     maxTokens,
-    orchestration:{ score:plan.score, mode:plan.mode, assignments:plan.assignments },
+    modelSelection: selectRoleModel({ role, score:plan.score, highRisk:researchRisk(query), routingUncertainty:plan.routingUncertainty, config:modelConfig }),
+    orchestration:{ score:plan.score, mode:plan.mode, primary:plan.primary, modelTiering:plan.modelTiering, assignments:plan.assignments },
     scope:{ topics:selectedTopics, writeScope:role === "evidence-extractor" ? selectedTopics.slice(0,1) : [] },
     graph:graphs,
     sources:sourceSearch.results.map((x) => ({
