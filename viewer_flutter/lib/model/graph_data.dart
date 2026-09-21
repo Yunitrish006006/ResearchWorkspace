@@ -10,8 +10,14 @@ class GraphData {
     this.sourceAreas = const [],
     this.artifacts = const [],
     required this.relations,
+    this.paperNodes = const [],
+    this.paperRelations = const [],
+    this.paperWarnings = const [],
   });
 
+  final List<PaperNode> paperNodes;
+  final List<GraphRelation> paperRelations;
+  final List<String> paperWarnings;
   final String snapshotDate;
   final GraphRoot root;
   final List<GraphTopic> topics;
@@ -26,6 +32,9 @@ class GraphData {
   factory GraphData.fromJson(Map<String, dynamic> json) {
     final snapshot = Map<String, dynamic>.from(json['snapshot'] as Map? ?? const {});
     return GraphData(
+      paperNodes: _objects((json['paperGraph'] as Map?)?['nodes']).map(PaperNode.fromJson).toList(),
+      paperRelations: _objects((json['paperGraph'] as Map?)?['relations']).map(GraphRelation.fromJson).toList(),
+      paperWarnings: (((json['paperGraph'] as Map?)?['warnings']) as List? ?? const []).whereType<String>().toList(),
       snapshotDate: snapshot['date'] as String? ?? 'unknown',
       root: GraphRoot.fromJson(Map<String, dynamic>.from(json['root'] as Map? ?? const {})),
       topics: _objects(json['topics']).map(GraphTopic.fromJson).toList(growable: false),
@@ -186,8 +195,10 @@ class GraphArtifact {
 }
 
 class GraphRelation {
-  const GraphRelation({required this.id, required this.from, required this.to, required this.type, required this.label});
+  const GraphRelation({required this.id, required this.from, required this.to, required this.type, required this.label, this.outcome, this.provenance = ''});
   final String id;
+  final String? outcome;
+  final String provenance;
   final String from;
   final String to;
   final String type;
@@ -196,7 +207,24 @@ class GraphRelation {
     id: json['id'] as String? ?? '',
     from: json['from'] as String? ?? '',
     to: json['to'] as String? ?? '',
+    outcome: json['outcome'] as String?,
+    provenance: [json['sourceLocator'], json['targetLocator'], json['context']].where((x) => x != null).join(' → '),
     type: json['type'] as String? ?? 'related',
     label: json['label'] as String? ?? '',
+  );
+}
+
+class PaperNode {
+  const PaperNode({required this.id, required this.kind, required this.label, this.parentId, this.summary = '', this.detail = '', this.status});
+  final String id, kind, label, summary, detail;
+  final String? parentId, status;
+  factory PaperNode.fromJson(Map<String, dynamic> json) => PaperNode(
+    id: json['id'] as String,
+    kind: json['kind'] as String,
+    label: json['label'] as String,
+    parentId: json['parentId'] as String?,
+    summary: json['summary'] as String? ?? '',
+    status: json['status'] as String?,
+    detail: (json['locator'] as Map? ?? const {}).entries.map((e) => '${e.key}: ${e.value}').join('\n'),
   );
 }

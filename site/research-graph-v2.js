@@ -28,8 +28,9 @@ var reviewMap=new Map(reviews.map(function(x){return[x.id,x]}));
 var sourceAreaMap=new Map(sourceAreas.map(function(x){return[x.id,x]}));
 var artifactMap=new Map(artifacts.map(function(x){return[x.id,x]}));
 
-var edgeFilterKeys=["contains","supports","uses-method","grounded-in","validated-by","limits"];
+var edgeFilterKeys=["contains","cites","compares","argues","uses-data","supports","uses-method","grounded-in","validated-by","limits"];
 var enabledEdgeFilters=new Set(edgeFilterKeys);
+var paperFirst=true;
 var expanded=new Set();
 var spotlightId=null;
 var keyboardFocusId=null;
@@ -66,12 +67,13 @@ function replaceData(next){
   sourceAreaMap=new Map(sourceAreas.map(function(x){return[x.id,x]}));
   artifactMap=new Map(artifacts.map(function(x){return[x.id,x]}));
   var valid=new Set([root.id].concat(topics.map(function(x){return x.id}),claims.map(function(x){return x.id}),sourceAreas.map(function(x){return x.id})));
+  if(DATA.paperGraph)DATA.paperGraph.nodes.forEach(function(n){valid.add(n.id)});
   Array.from(expanded).forEach(function(id){if(!valid.has(id))expanded.delete(id)});
   if(spotlightId&&!valid.has(spotlightId))spotlightId=null;
   if(keyboardFocusId&&!valid.has(keyboardFocusId))keyboardFocusId=root.id;
   var snapshot=document.getElementById("snapshot"),stats=document.getElementById("stats");
   if(snapshot)snapshot.textContent=((DATA.snapshot&&DATA.snapshot.date)||"unknown")+" research snapshot";
-  if(stats)stats.textContent=topics.length+" topics｜"+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+sourceAreas.length+" source areas｜"+artifacts.length+" artifacts｜"+reviews.length+" reviews";
+  if(stats)stats.textContent=(DATA.paperGraph?DATA.paperGraph.nodes.filter(function(n){return n.kind==="paper"}).length+" 論文｜論點 → 方法／資料 → 結果｜":topics.length+" topics｜")+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+sourceAreas.length+" source areas｜"+artifacts.length+" artifacts｜"+reviews.length+" reviews";
   draw();
   return true;
 }
@@ -90,7 +92,7 @@ function setLiveState(state){
 }
 
 document.getElementById("snapshot").textContent=(DATA.snapshot.date||"unknown")+" research snapshot";
-document.getElementById("stats").textContent=topics.length+" topics｜"+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+sourceAreas.length+" source areas｜"+artifacts.length+" artifacts｜"+reviews.length+" reviews";
+document.getElementById("stats").textContent=(DATA.paperGraph?DATA.paperGraph.nodes.filter(function(n){return n.kind==="paper"}).length+" 論文｜論點 → 方法／資料 → 結果｜":topics.length+" topics｜")+claims.length+" claims｜"+studies.length+" studies｜"+evidence.length+" evidence｜"+sourceAreas.length+" source areas｜"+artifacts.length+" artifacts｜"+reviews.length+" reviews";
 var passCount=reviews.filter(function(x){return x.status==="PASS"}).length;
 var failCount=reviews.filter(function(x){return x.status==="FAIL"}).length;
 var warnCount=reviews.filter(function(x){return x.status==="WARN"}).length;
@@ -140,7 +142,29 @@ function clusterRadius(ownerId){
   return 100
 }
 function edgeVisible(edge){return !edge.type||enabledEdgeFilters.has(edge.type)}
+function paperScene(){
+  var all=DATA.paperGraph.nodes,map=new Map(all.map(function(n){return[n.id,n]})),nodes=[],edges=[],clusters=[];
+  function visit(n,pos,depth){
+    nodes.push({id:n.id,type:n.kind,label:n.label,position:pos,source:n,ownerId:n.parentId,rank:depth+1});
+    if(!expanded.has(n.id))return;
+    var children=all.filter(function(x){return x.parentId===n.id}),radius=Math.max(48,230/(depth+1));
+    if(children.length)clusters.push({ownerId:n.id,radius:radius,childCount:children.length});
+    children.forEach(function(c,i){var p=fib(i,children.length,radius);visit(c,{x:pos.x+p.x,y:pos.y+p.y,z:pos.z+p.z},depth+1)});
+  }
+  var papers=all.filter(function(n){return !n.parentId});
+  papers.forEach(function(n,i){visit(n,i===0?{x:0,y:0,z:0}:fib(i-1,papers.length-1,360),0)});
+  var visible=new Set(nodes.map(function(n){return n.id})),emitted=new Set();
+  function ancestor(id){var seen=new Set();while(id&&!seen.has(id)){if(visible.has(id))return id;seen.add(id);id=(map.get(id)||{}).parentId}return null}
+  DATA.paperGraph.relations.forEach(function(r){
+    if(r.type!=="contains"&&!enabledEdgeFilters.has(r.type))return;
+    var from=ancestor(r.from),to=ancestor(r.to),key=[from,to,r.type,r.outcome].join('|');
+    if(!from||!to||from===to||emitted.has(key))return;
+    emitted.add(key);edges.push(Object.assign({},r,{from:from,to:to}));
+  });
+  return {nodes:nodes,edges:edges,clusters:clusters};
+}
 function scene(){
+  if(paperFirst&&DATA.paperGraph&&DATA.paperGraph.nodes.length)return paperScene();
   var nodes=[],edges=[],clusters=[];
   nodes.push({id:root.id,type:"root",label:root.name,position:{x:0,y:0,z:0},source:root,rank:0});
   var radius=topicRadius();
@@ -209,6 +233,12 @@ function scene(){
   return{nodes:nodes,edges:edges.filter(edgeVisible),clusters:clusters}
 }
 function nodeColor(node){
+  if(node.type==="paper")return "#60a5fa";
+  if(node.type==="point")return "#fbbf24";
+  if(node.type==="method")return "#a78bfa";
+  if(node.type==="dataset")return "#22d3ee";
+  if(node.type==="experiment")return "#fb923c";
+  if(node.type==="result")return "#a7f3d0";
   if(node.type==="root")return"#67e8f9";
   if(node.type==="topic")return"#60a5fa";
   if(node.type==="claim"){
@@ -228,6 +258,10 @@ function nodeColor(node){
   return"#94a3b8"
 }
 function edgeColor(type){
+  if(type==="cites")return "#60a5fa";
+  if(type==="argues")return "#a78bfa";
+  if(type==="uses-data")return "#22d3ee";
+  if(type==="compares")return "#f59e0b";
   if(type==="contains")return"#60a5fa";
   if(type==="supports")return"#34d399";
   if(type==="uses-method")return"#a78bfa";
@@ -288,7 +322,7 @@ function draw(){
     var verificationStatus=liveOverlay.failedVerification.has(edge.from)||liveOverlay.failedVerification.has(edge.to)?"failed":
       liveOverlay.runningVerification.has(edge.from)||liveOverlay.runningVerification.has(edge.to)?"running":
       liveOverlay.passedVerification.has(edge.from)||liveOverlay.passedVerification.has(edge.to)?"passed":null;
-    var color=changed?"#fbbf24":verificationStatus&&edge.type==="validated-by"?(verificationStatus==="failed"?"#f87171":verificationStatus==="running"?"#67e8f9":"#86efac"):edgeColor(edge.type);
+    var color=changed?"#fbbf24":verificationStatus&&edge.type==="validated-by"?(verificationStatus==="failed"?"#f87171":verificationStatus==="running"?"#67e8f9":"#86efac"):(edge.outcome==="BETTER"?"#4ade80":edge.outcome==="WORSE"?"#fb7185":edge.outcome==="TIE"?"#facc15":edge.outcome==="NOT_COMPARABLE"?"#94a3b8":edgeColor(edge.type));
     var alpha=changed?.96:(active?.78:.10),widthLine=changed?2.8:(verificationStatus&&edge.type==="validated-by"?2.6:(active?1.7:.8));
     ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=widthLine;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.globalAlpha=1;
     drawArrowhead(ctx,a,b,color,alpha,widthLine);
@@ -300,7 +334,7 @@ function draw(){
     if(liveOverlay.historicalEntityIds.size&&!liveOverlay.historicalEntityIds.has(node.id))return;
     var p=projected.get(node.id),selected=spotlightId===node.id||keyboardFocusId===node.id,connected=connectedToSpotlight(current,node.id);
     var child=node.type==="claim"||node.type==="study"||node.type==="evidence"||node.type==="review"||node.type==="source-area"||node.type==="artifact";
-    var base=node.type==="root"?18:node.type==="topic"?13:node.type==="claim"?8:5.8;
+    var base=node.type==="root"?18:(node.type==="topic"||node.type==="paper")?13:node.type==="claim"?8:5.8;
     var radius=Math.max(child?4.4:8,base*p.scale),color=nodeColor(node);
     ctx.save();ctx.globalAlpha=spotlightId&&!connected?.15:1;
     var nodeChanged=liveOverlay.changedEntityIds.has(node.id);
@@ -328,6 +362,7 @@ function hit(clientX,clientY){
   hits.sort(function(a,b){return b.z-a.z});return hits[0]||null
 }
 function typeLabel(node){
+  if(paperFirst&&DATA.paperGraph)return ({paper:"論文",point:"論點／章節",method:"演算法",dataset:"資料集",experiment:"實驗",result:"結果",reference:"參考來源"})[node.type]||node.type;
   return node.type==="root"?"THESIS":node.type==="topic"?"TOPIC":node.type==="claim"?"CLAIM":node.type==="study"?"STUDY / METHOD":node.type==="evidence"?"EVIDENCE":node.type==="source-area"?"SOURCE AREA":node.type==="artifact"?"SOURCE ARTIFACT":"VERIFICATION"
 }
 function itemClass(status){return status==="PASS"||status==="SUPPORTED"?"ok":status==="FAIL"||status==="NOT_SUPPORTED"?"fail":"warn"}
@@ -348,6 +383,31 @@ function setInfo(node,sections){
   document.getElementById("infoContent").innerHTML=html;info.hidden=false
 }
 function showNode(node){
+  if(paperFirst&&DATA.paperGraph){
+    keyboardFocusId=node.id;
+    if(expanded.has(node.id))expanded.delete(node.id);else expanded.add(node.id);
+    var map=new Map(DATA.paperGraph.nodes.map(function(n){return[n.id,n]}));
+    function belongs(id){while(id){if(id===node.id)return true;id=(map.get(id)||{}).parentId}return false}
+    var rels=DATA.paperGraph.relations.filter(function(r){return r.type!=="contains"&&enabledEdgeFilters.has(r.type)&&(belongs(r.from)||belongs(r.to))});
+    setInfo(node,[]);
+    var container=document.getElementById("infoContent");
+    function line(value){var div=document.createElement('div');div.className='item';div.textContent=value;container.appendChild(div)}
+    line(JSON.stringify(node.source.locator||{}));
+    line('論文 → 章節／論點 → 演算法、資料集、實驗 → 指標與逐項比較');
+    (DATA.paperGraph.warnings||[]).forEach(line);
+    var shown=0;
+    function more(){
+    var page=rels.slice(shown,shown+40);shown+=page.length;
+    page.forEach(function(r){
+      line(r.label+'\n'+(map.get(r.from)||{}).label+' → '+(map.get(r.to)||{}).label+'\n'+JSON.stringify(r.sourceLocator||{})+' → '+JSON.stringify(r.targetLocator||{}));
+      var button=document.createElement('button');button.textContent='定位雙方論點';
+      button.onclick=function(){[r.from,r.to].forEach(function(id){var n=map.get(id);while(n&&n.parentId){expanded.add(n.parentId);n=map.get(n.parentId)}});keyboardFocusId=r.to;draw()};container.appendChild(button);
+    });
+    if(shown<rels.length){var next=document.createElement('button');next.textContent='再顯示 40 條（共 '+rels.length+' 條）';next.onclick=function(){next.remove();more()};container.appendChild(next)}
+    }
+    more();
+    draw();return;
+  }
   keyboardFocusId=node.id;
   if(node.type==="topic"){
     if(expanded.has(node.id)){
@@ -447,8 +507,10 @@ canvas.addEventListener("wheel",function(event){event.preventDefault();cam.zoom=
 
 document.getElementById("overview").addEventListener("click",resetView);
 document.getElementById("expandAll3d").addEventListener("click",function(){
+  if(DATA.paperGraph)DATA.paperGraph.nodes.forEach(function(n){expanded.add(n.id)});
   topics.forEach(function(t){expanded.add(t.id)});claims.forEach(function(c){expanded.add(c.id)});sourceAreas.forEach(function(a){expanded.add(a.id)});cam.zoom=.46;cam.panX=0;cam.panY=0;spotlightId=null;info.hidden=true;draw()
 });
+document.getElementById("paperMode").addEventListener("click",function(){paperFirst=!paperFirst;this.textContent=paperFirst?"研究治理視圖":"論文視圖";resetView()});
 var edgeFilterButton=document.getElementById("edgeFilters"),edgeFilterPanel=document.getElementById("edgeFilterPanel");
 edgeFilterButton.addEventListener("click",function(){var open=edgeFilterPanel.hidden;edgeFilterPanel.hidden=!open;edgeFilterButton.setAttribute("aria-expanded",open?"true":"false")});
 function syncEdgeUi(){

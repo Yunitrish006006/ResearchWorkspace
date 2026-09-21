@@ -91,7 +91,7 @@ function serveStatic(req,res){
     if(base===flutterWeb&&flutterReady)full=path.join(flutterWeb,"index.html");
     else{res.statusCode=404;res.end("Not found");return}
   }
-  const ext=path.extname(full),type={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".json":"application/json; charset=utf-8",".wasm":"application/wasm",".svg":"image/svg+xml",".png":"image/png"}[ext]||"application/octet-stream";
+  const ext=path.extname(full),type={".html":"text/html; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",".css":"text/css; charset=utf-8",".json":"application/json; charset=utf-8",".wasm":"application/wasm",".svg":"image/svg+xml",".png":"image/png"}[ext]||"application/octet-stream";
   res.setHeader("Content-Type",type);res.end(fs.readFileSync(full));
 }
 async function submitPrompt(data,{source="viewer",clientMessageId=null}={}){

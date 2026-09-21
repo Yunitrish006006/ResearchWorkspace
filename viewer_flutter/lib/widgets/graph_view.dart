@@ -48,6 +48,8 @@ class GraphView extends StatefulWidget {
 
 class _GraphViewState extends State<GraphView>
     with SingleTickerProviderStateMixin {
+  bool _paperFirst = true;
+  int _relationshipLimit = 40;
   Camera3d _camera = const Camera3d();
   final Set<String> _expanded = <String>{};
   final Set<String> _transientActivityExpanded = <String>{};
@@ -70,6 +72,7 @@ class _GraphViewState extends State<GraphView>
 
   GraphScene get _scene => buildGraphScene(
     widget.data,
+    paperFirst: _paperFirst,
     expanded: _visibleExpanded,
     enabledFilters: _enabledFilters,
   );
@@ -169,6 +172,7 @@ class _GraphViewState extends State<GraphView>
   void _expandAll() => setState(() {
     _expanded
       ..clear()
+      ..addAll(widget.data.paperNodes.map((x) => x.id))
       ..addAll(widget.data.topics.map((x) => x.id))
       ..addAll(widget.data.claims.map((x) => x.id))
       ..addAll(widget.data.sourceAreas.map((x) => x.id));
@@ -180,7 +184,8 @@ class _GraphViewState extends State<GraphView>
     if (node == null) return;
     setState(() {
       _selectedId = id;
-      if (node.kind == 'topic' || node.kind == 'claim' || node.kind == 'source-area') {
+      _relationshipLimit = 40;
+      if (widget.data.paperNodes.any((n) => n.parentId == id) || node.kind == 'topic' || node.kind == 'claim' || node.kind == 'source-area') {
         if (_expanded.contains(id)) {
           _expanded.remove(id);
           if (node.kind == 'topic') {
@@ -261,6 +266,13 @@ class _GraphViewState extends State<GraphView>
         : scene.edges
             .where((edge) => edge.from == selected.id || edge.to == selected.id)
             .toList(growable: false);
+    final paperMap = {for (final n in widget.data.paperNodes) n.id: n};
+    bool belongs(String id, String owner) {
+      String? current = id;
+      while (current != null) { if (current == owner) return true; current = paperMap[current]?.parentId; }
+      return false;
+    }
+    final paperRelationships = !_paperFirst || selected == null ? <GraphRelation>[] : widget.data.paperRelations.where((r) => r.type != 'contains' && _enabledFilters.contains(r.type) && (belongs(r.from, selected.id) || belongs(r.to, selected.id))).toList();
     final mediaWidth = MediaQuery.sizeOf(context).width;
 
     return Stack(
@@ -366,11 +378,12 @@ class _GraphViewState extends State<GraphView>
                 const SizedBox(height: 10),
                 Wrap(spacing: 7, runSpacing: 7, children: [
                   FilledButton.tonal(onPressed: _reset, child: const Text('總覽')),
+                  FilledButton.tonal(onPressed: () => setState(() { _paperFirst = !_paperFirst; _expanded.clear(); _selectedId = null; }), child: Text(_paperFirst ? '研究治理視圖' : '論文視圖')),
                   FilledButton.tonal(onPressed: _expandAll, child: const Text('全展開')),
                 ]),
                 const SizedBox(height: 8),
                 Text(
-                  widget.data.topics.length.toString() + ' topics · ' +
+                  widget.data.paperNodes.isNotEmpty ? '${widget.data.paperNodes.where((n) => n.kind == 'paper').length} 論文 · 論點 → 方法／資料 → 結果' : widget.data.topics.length.toString() + ' topics · ' +
                       widget.data.claims.length.toString() + ' claims · ' +
                       widget.data.evidence.length.toString() + ' evidence',
                   style: const TextStyle(fontSize: 11, color: Color(0xFFBDD0E5)),
@@ -468,6 +481,26 @@ class _GraphViewState extends State<GraphView>
                   _InfoItem('STATUS · ' + selected.status!),
                 if (selected.detail != null) _InfoItem(selected.detail!),
                 const SizedBox(height: 14),
+                if (paperMap.containsKey(selected.id)) ...[
+                  const _SectionTitle('對應關係與雙方定位'),
+                  for (final warning in widget.data.paperWarnings) _InfoItem(warning),
+                  if (paperRelationships.isEmpty) const _InfoItem('此節點尚無已登錄的對應關係'),
+                  _InfoItem('綠：較佳 · 粉紅：較差 · 黃：持平 · 灰：不可直接比較'),
+                  for (final r in paperRelationships.take(_relationshipLimit)) ListTile(
+                    dense: true,
+                    title: Text(r.label, style: const TextStyle(fontSize:12)),
+                    subtitle: Text('${paperMap[r.from]?.label ?? r.from} → ${paperMap[r.to]?.label ?? r.to}\n${r.provenance}', style:const TextStyle(fontSize:10)),
+                    trailing: const Icon(Icons.travel_explore, size:18),
+                    onTap: () => setState(() {
+                      for (final id in [r.from,r.to]) {
+                        String? current=paperMap[id]?.parentId;
+                        while(current!=null) { _expanded.add(current); current=paperMap[current]?.parentId; }
+                      }
+                      _selectedId=r.to;
+                    }),
+                  ),
+                  if (paperRelationships.length > _relationshipLimit) TextButton(onPressed: () => setState(() => _relationshipLimit += 40), child: Text('再顯示 40 條（共 ${paperRelationships.length} 條）')),
+                ],
                 const _SectionTitle('Visible relationships'),
                 if (relationships.isEmpty)
                   const _InfoItem('No visible relationship under current filters'),
@@ -481,7 +514,7 @@ class _GraphViewState extends State<GraphView>
                       edge.label),
                 const SizedBox(height: 12),
                 Text(
-                  selected.kind == 'topic' ||
+                  widget.data.paperNodes.any((n) => n.parentId == selected.id) || selected.kind == 'topic' ||
                           selected.kind == 'claim' ||
                           selected.kind == 'source-area'
                       ? (_visibleExpanded.contains(selected.id)
@@ -651,7 +684,7 @@ class _GraphPainter extends CustomPainter {
           ? const Color(0xFFFBBF24)
           : vStatus != null && edge.type == 'validated-by'
           ? _verificationColor(vStatus)
-          : _edgeColor(edge.type);
+          : edge.outcome == 'BETTER' ? const Color(0xFF4ADE80) : edge.outcome == 'WORSE' ? const Color(0xFFFB7185) : edge.outcome == 'TIE' ? const Color(0xFFFACC15) : edge.outcome == 'NOT_COMPARABLE' ? const Color(0xFF94A3B8) : _edgeColor(edge.type);
       final changePulse = changeAnimationsEnabled
           ? (math.sin(activityPulse.value * math.pi * 2) + 1) * .5
           : .5;
@@ -670,7 +703,7 @@ class _GraphPainter extends CustomPainter {
       if (historicalEntityIds.isNotEmpty && !historicalEntityIds.contains(node.id)) continue;
       final p = projected[node.id]!;
       final selected = node.id == selectedId;
-      final base = node.kind == 'root' ? 18.0 : node.kind == 'topic' ? 13.0 : node.kind == 'claim' ? 8.0 : 5.8;
+      final base = node.kind == 'root' ? 18.0 : (node.kind == 'topic' || node.kind == 'paper') ? 13.0 : node.kind == 'claim' ? 8.0 : 5.8;
       final radius = math.max(node.isChild ? 4.5 : 8.0, base * p.scale);
       final color = _nodeColor(node);
       final spotlightVisible = spotlightId == null ||
@@ -725,6 +758,12 @@ class _GraphPainter extends CustomPainter {
 
   Color _nodeColor(VisualNode node) => switch (node.kind) {
     'root' => const Color(0xFF67E8F9),
+    'paper' => const Color(0xFF60A5FA),
+    'point' => const Color(0xFFFBBF24),
+    'method' => const Color(0xFFA78BFA),
+    'dataset' => const Color(0xFF22D3EE),
+    'experiment' => const Color(0xFFFB923C),
+    'result' => const Color(0xFFA7F3D0),
     'topic' => const Color(0xFF60A5FA),
     'claim' when node.status == 'NOT_SUPPORTED' => const Color(0xFFFB7185),
     'claim' when node.status == 'PARTIAL' => const Color(0xFFF59E0B),
@@ -741,6 +780,10 @@ class _GraphPainter extends CustomPainter {
 
   Color _edgeColor(String type) => switch (type) {
     'contains' => const Color(0xFF60A5FA),
+    'cites' => const Color(0xFF60A5FA),
+    'compares' => const Color(0xFFF59E0B),
+    'argues' => const Color(0xFFA78BFA),
+    'uses-data' => const Color(0xFF22D3EE),
     'supports' => const Color(0xFF34D399),
     'uses-method' => const Color(0xFFA78BFA),
     'grounded-in' => const Color(0xFF22D3EE),

@@ -3,7 +3,7 @@ on:
   push:
     paths:
       - "viewer_flutter/**"
-      - "intelligence/graph-view-model.mjs"
+      - "intelligence/**"
       - "scripts/render-flutter-graph.mjs"
       - "data/research-graph.json"
       - ".github/workflows/flutter-viewer.yml"
@@ -19,6 +19,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Clone canonical thesis evidence
+        run: git clone --depth=100 --single-branch --branch main https://github.com/Yunitrish006006/Three-Factor-Digital-Twin.git ../Three-Factor-Digital-Twin
       - name: Generate shared graph asset
         run: node scripts/render-flutter-graph.mjs
       - uses: subosito/flutter-action@v2

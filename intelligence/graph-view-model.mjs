@@ -3,6 +3,8 @@ import { buildVerificationGraph } from "./verification-graph.mjs";
 import { repositoryStatusSummary } from "./repository-status.mjs";
 import { buildGeneratedSourceLayer } from "./source-layer.mjs";
 
+import { buildPaperGraph } from "./paper-graph.mjs";
+
 export function buildGraphViewModel(knowledge = loadKnowledge()) {
   const verification = buildVerificationGraph(knowledge);
   const sourceLayer = buildGeneratedSourceLayer({ knowledge });
@@ -11,6 +13,7 @@ export function buildGraphViewModel(knowledge = loadKnowledge()) {
   const effectiveThesisCommit = thesis?.head || knowledge.snapshot.thesisCommit;
   return Object.freeze({
     schemaVersion:3,
+    paperGraph:buildPaperGraph(),
     snapshot:{
       date:knowledge.snapshot.date,
       thesisRepo:knowledge.snapshot.thesisRepository,
