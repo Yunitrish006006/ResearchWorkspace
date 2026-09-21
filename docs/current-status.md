@@ -4,13 +4,13 @@ Status date: 2026-09-06
 
 ## Current thesis handoff (2026-09-21)
 
-- Current canonical thesis HEAD: `36f7161d8fd21064eb58f33c0a1f8cf9de5f7d9f`
+- Current canonical thesis HEAD: `add7118c5ba8f98946f80bb8fc2d15e380e7b2f2`
 - Research route artifacts remain owned by the thesis checkout:
   - `docs/research/api_candidate_comparison_2026-09-21_zh.md`
   - `docs/research/systematic_parameter_tuning_protocol_2026-09-21_zh.md`
   - `openspec/changes/systematic-parameter-tuning-20260921/`
   - `docs/reports/professor_catchup_report_2026-09-21_zh.html`
-- Current evidence status: API comparison and protocol are complete; TCLab simulation smoke test passes with repeatable hashes; Linux BOPTEST locked validation/holdout passes for one FMU on two new dates against fixed PI; toy, simulation, and BOPTEST artifacts remain non-causal and non-general evidence.
+- Current evidence status: API comparison and protocol are complete; TCLab simulation smoke test passes with repeatable hashes; Linux BOPTEST locked validation/holdout passes for one FMU on two new dates against fixed PI; the gate decision keeps E8 intervention `NOT_EVALUATED` pending more testcases/seeds; toy, simulation, and BOPTEST artifacts remain non-causal evidence.
 - The audited graph snapshot below remains historical by design; generated views should expose the current thesis HEAD and snapshot drift rather than silently rewriting audit provenance.
 
 ## Audited upstream baselines
