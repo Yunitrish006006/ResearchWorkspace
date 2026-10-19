@@ -100,6 +100,10 @@ records first-person narration, catch-up coverage, research problems and
 simulation API discovery, evidence checks, and offline HTML quality assurance.
 Report artifacts themselves remain in the canonical thesis checkout.
 
+## Paper Reading Tutor Skill
+
+The [paper-reading-tutor](.agents/skills/paper-reading-tutor/SKILL.md) reproduces the original-paper study method used for the Kalman 1960 reading: source checks, worked derivations, **one question per turn**, corrective grading, one-question remedial follow-up, oral-defense practice, and persistent notes in the thesis repository. See [workflow memory](data/project-memory/paper-reading-workflow_zh.md) and [note template](.agents/skills/paper-reading-tutor/assets/learning-notes-template.md). For example: `讀完了，開始考我`, `這個公式怎麼推導？`, `把這次補考整理回筆記`.
+
 ## Quick start
 
 The thesis checkout may be a sibling named `Three-Factor-Digital-Twin` or

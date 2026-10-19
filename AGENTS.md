@@ -26,6 +26,10 @@ ResearchWorkspace is the research-intelligence coordination layer for the thesis
   research status against canonical sources. New explicit user instructions take
   precedence over recorded preferences.
 
+## Original-paper learning Skill
+
+For original academic paper reading, equation walkthroughs, progressive single-question quizzes, remedial learning, oral-defense rehearsal and study-note consolidation, read `.agents/skills/paper-reading-tutor/SKILL.md` and `data/project-memory/paper-reading-workflow_zh.md` first. Preserve exact original-source provenance and distinguish historical paper claims from modern teaching examples. One question per turn; do not fabricate student progress, answers or scores. Thesis-facing study artifacts belong in canonical Three-Factor-Digital-Twin; this repo owns the reusable process.
+
 ## TotemWorkspace parity rule
 
 `Yunitrish006006/TotemWorkspace` is the reference implementation for workspace behavior.

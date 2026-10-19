@@ -18,6 +18,7 @@ Audited Totem baseline: `Yunitrish006006/TotemWorkspace@7145982b91bada1817ea8175
 | Flutter bootstrap | `tools/remote/bootstrap-flutter.sh` | pinned user-space Flutter install/status |
 | CodexDiscord | `tools/codex-discord/` | allowlisted Discord/Codex App Server and conversation sync |
 | Agent skill | `.agents/skills/research-workspace-intelligence/` | graph-first research operating instructions |
+| Paper reading Skill | `.agents/skills/paper-reading-tutor/` | grounded paper reading, adaptive oral quizzes and study-note consolidation |
 | Source inventory | `scripts/report-source-inventory.mjs` | source-first inventory and mapping coverage |
 
 ## Status
